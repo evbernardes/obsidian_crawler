@@ -1,4 +1,6 @@
+import hashlib
 import re
+from copy import deepcopy
 from pathlib import Path
 
 import yaml
@@ -32,11 +34,27 @@ def _join_frontmatter(fm, body, spaces=1):
 
 
 class ObsidianNote:
+    def _calculate_hash(self):
+        # if content is None:
+        return hashlib.sha256(
+            _join_frontmatter(self.fm, self.body).encode("utf-8")
+        ).hexdigest()
+
+    def _update_snapshot(self):
+        self._original_content = {"fm": deepcopy(self.fm), "body": self.body}
+        self._hash = self._calculate_hash()
+
+    def reset(self):
+        self.fm = deepcopy(self._original_content["fm"])
+        self.body = self._original_content["body"]
+
     def __init__(self, path, fm=None, body=None):
-        self._path = path
+        self.path = path
         self.fm = {} if fm is None else fm
         self.body = "" if body is None else body
-        # self.raw_content = raw_content if raw_content is not None else ""
+
+        self._update_snapshot()
+        # self._hash = self._calculate_hash()
 
     @classmethod
     def from_file(cls, path):
@@ -53,15 +71,25 @@ class ObsidianNote:
         return cls(path=path, fm=fm, body=body)
 
     def write(self, path=None, spaces=1):
-        if path is None:
-            path = self.path
-        else:
-            path = Path(path)
+        target = self.path if path is None else Path(path)
+
+        if not self.modified and target == self.path:
+            return False
+
         content = _join_frontmatter(self.fm, self.body, spaces)
-        self.path.write_text(content, encoding="utf-8")
+        target.write_text(content, encoding="utf-8")
+
+        self.path = target
+        self._update_snapshot()
+
+        return True
 
     def __repr__(self):
         return f"<ObsidianNote {self.title}>"
+
+    @property
+    def modified(self):
+        return self._calculate_hash() != self._hash
 
     @property
     def path(self):
