@@ -5,12 +5,6 @@ A lightweight Python library for reading, querying and modifying notes in Obsidi
 ## Installation
 
 ```bash
-pip install git+https://github.com/evbernardes/obsidian-crawler.git
-```
-
-or
-
-```bash
 git clone https://github.com/evbernardes/obsidian-crawler.git
 cd obsidian-crawler
 pip install -e .
