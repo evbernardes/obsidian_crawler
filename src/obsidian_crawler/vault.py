@@ -1,3 +1,4 @@
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -15,6 +16,7 @@ class ObsidianVault:
     def __init__(self, vault_path):
         self.vault_path = Path(vault_path)
         self._cache = None
+        self._title_cache = None
 
     # ---------------------------------------------------------
     # Cache management
@@ -28,15 +30,21 @@ class ObsidianVault:
             mtime=path.stat().st_mtime_ns,
         )
 
+    def _cache_note(self, entry: CachedNote):
+        """
+        Insert or replace a note in every cache/index.
+        """
+        self._cache[entry.note.path.resolve()] = entry
+
+        if self._title_cache is not None:
+            self._title_cache[entry.note.title] = entry.note
+
     def _load_notes(self):
         """Load the entire vault."""
         return {
             path.resolve(): self._load_note(path)
             for path in self.vault_path.rglob("*.md")
         }
-
-    def refresh(self):
-        self._cache = None
 
     def load(self):
         """
@@ -45,6 +53,30 @@ class ObsidianVault:
         if self._cache is None:
             self._cache = self._load_notes()
         return self
+
+    def _build_title_cache(self):
+        self.load()
+
+        title_cache = {}
+
+        for entry in self._cache.values():
+            note = entry.note
+
+            if note.title in title_cache:
+                warnings.warn(
+                    f"Duplicate note title '{note.title}'. "
+                    "Keeping the first occurrence for link resolution.",
+                    RuntimeWarning,
+                )
+                continue
+
+            title_cache[note.title] = note
+
+        self._title_cache = title_cache
+
+    def refresh(self):
+        self._cache = None
+        self._title_cache = None
 
     # ---------------------------------------------------------
     # Notes / Queries
@@ -62,6 +94,14 @@ class ObsidianVault:
 
     def query(self):
         return ObsidianQuery(self.notes)
+
+    def resolve(self, link):
+        if self._title_cache is None:
+            self._build_title_cache()
+
+        target = link.target if hasattr(link, "target") else str(link)
+
+        return self._title_cache.get(target)
 
     # ---------------------------------------------------------
     # Individual note access
@@ -86,13 +126,14 @@ class ObsidianVault:
 
         if entry is None:
             entry = self._load_note(path)
-            self._cache[path] = entry
+            self._cache_note(entry)
             return entry.note
 
         current_mtime = path.stat().st_mtime_ns
         if current_mtime != entry.mtime:
             entry = self._load_note(path)
-            self._cache[path] = entry
+            self._cache_note(entry)
+
         return entry.note
 
     def write_note(self, note_path, fm, body, spaces=1):
@@ -107,7 +148,9 @@ class ObsidianVault:
         note.write(spaces=spaces)
 
         if self._cache is not None:
-            self._cache[path.resolve()] = CachedNote(
-                note=note,
-                mtime=path.stat().st_mtime_ns,
+            self._cache_note(
+                CachedNote(
+                    note=note,
+                    mtime=path.stat().st_mtime_ns,
+                )
             )

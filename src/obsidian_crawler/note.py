@@ -5,6 +5,8 @@ from pathlib import Path
 
 import yaml
 
+from .link import _parse_links
+
 
 def _remove_dataviewjs_blocks(text):
     return re.sub(r"```dataviewjs\s*[\s\S]*?```", "", text, flags=re.IGNORECASE).strip()
@@ -56,6 +58,7 @@ class ObsidianNote:
     def _update_snapshot(self):
         self._original_content = {"fm": deepcopy(self.fm), "body": self.body}
         self._hash = self._calculate_hash()
+        self._links = _parse_links(self.body)
 
     def reset(self):
         self.fm = deepcopy(self._original_content["fm"])
@@ -67,7 +70,6 @@ class ObsidianNote:
         self.body = "" if body is None else body
 
         self._update_snapshot()
-        # self._hash = self._calculate_hash()
 
     @classmethod
     def from_file(cls, path):
@@ -131,6 +133,7 @@ class ObsidianNote:
         if not isinstance(value, str):
             raise TypeError("body must be a string")
         self._body = value
+        self._links = _parse_links(value)
 
     @property
     def body_without_dataview_blocks(self):
@@ -155,6 +158,16 @@ class ObsidianNote:
             "fm": self.fm,
             "body": self.body,
         }
+
+    @property
+    def links(self):
+        return self._links
+
+    def linked_notes(self, vault):
+        for link in self.links:
+            note = vault.resolve(link)
+            if note is not None:
+                yield note
 
     def show(self):
         print(
