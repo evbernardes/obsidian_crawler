@@ -11,26 +11,39 @@ def _remove_dataviewjs_blocks(text):
 
 
 def _split_frontmatter(md_text: str):
-    """Extract YAML frontmatter delimited by --- ... --- at the top of the file."""
-    if not md_text.lstrip().startswith("---"):
-        raise ValueError("File does not start with YAML frontmatter '---'")
+    """
+    Extract YAML frontmatter from the beginning of a Markdown file.
 
-    # Match first frontmatter block at top of file
-    m = re.match(r"^\s*---\s*\n(.*?)\n---\s*\n(.*)$", md_text, flags=re.DOTALL)
-    if not m:
-        raise ValueError(
-            "Could not parse YAML frontmatter. Ensure it is delimited by --- on its own lines."
-        )
+    Returns
+    -------
+    (frontmatter: dict, body: str)
 
-    yaml_text = m.group(1)
-    body_text = m.group(2).strip()
+    Raises
+    ------
+    ValueError
+        If the file does not begin with valid YAML frontmatter.
+    """
+    lines = md_text.splitlines(keepends=True)
+
+    if not lines or lines[0].strip() != "---":
+        raise ValueError("File does not start with YAML frontmatter.")
+
+    try:
+        end = next(i for i in range(1, len(lines)) if lines[i].strip() == "---")
+    except StopIteration:
+        raise ValueError("Closing YAML delimiter not found.")
+
+    yaml_text = "".join(lines[1:end])
+    body = "".join(lines[end + 1 :])
+
     fm = yaml.safe_load(yaml_text) or {}
-    return fm, body_text
+
+    return fm, body
 
 
-def _join_frontmatter(fm, body, spaces=1):
+def _join_frontmatter(fm, body):
     fm_yaml = yaml.dump(fm, sort_keys=False)
-    return f"---\n{fm_yaml}---" + "\n" * spaces + f"{body}"
+    return f"---\n{fm_yaml}---" + "\n" + f"{body}"
 
 
 class ObsidianNote:
@@ -70,13 +83,13 @@ class ObsidianNote:
             body = content
         return cls(path=path, fm=fm, body=body)
 
-    def write(self, path=None, spaces=1):
+    def write(self, path=None):
         target = self.path if path is None else Path(path)
 
         if not self.modified and target == self.path:
             return False
 
-        content = _join_frontmatter(self.fm, self.body, spaces)
+        content = _join_frontmatter(self.fm, self.body)
         target.write_text(content, encoding="utf-8")
 
         self.path = target
