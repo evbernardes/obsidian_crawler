@@ -43,7 +43,7 @@ def _split_frontmatter(md_text: str):
 
 def _join_frontmatter(fm, body):
     fm_yaml = yaml.dump(fm, sort_keys=False)
-    return f"---\n{fm_yaml}---" + "\n" + f"{body}"
+    return f"---\n{fm_yaml}---\n{body}"
 
 
 class ObsidianNote:
