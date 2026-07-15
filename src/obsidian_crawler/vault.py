@@ -136,6 +136,14 @@ class ObsidianVault:
 
         return entry.note
 
+    def by_title(self, title):
+        note = self.resolve(title)
+
+        if note is None:
+            raise KeyError(f"No note named '{title}'.")
+
+        return note
+
     def write_note(self, note_path, fm, body, spaces=1):
         path = self.vault_path / note_path
 
