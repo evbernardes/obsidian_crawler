@@ -56,6 +56,14 @@ class ObsidianVault:
         if self._title_cache is not None:
             self._title_cache[entry.note.title] = entry.note
 
+    def _remove_cached_note(self, entry: CachedNote) -> None:
+
+        if self._cache is not None:
+            self._cache.pop(entry.note.path.resolve(), None)
+
+        if self._title_cache is not None:
+            self._title_cache.pop(entry.note.title, None)
+
     def _load_notes(self) -> dict[Path, CachedNote]:
         """Load the entire vault."""
         return {
@@ -171,7 +179,7 @@ class ObsidianVault:
     # Note writing and modification
     # ---------------------------------------------------------
 
-    def write_note(
+    def write(
         self,
         note_path: str | Path,
         fm: dict[str, Any],
@@ -205,12 +213,6 @@ class ObsidianVault:
         """
         old_path = note.path.resolve()
 
-        # old_path = (
-        #     note_path
-        #     if isinstance(note_path, Path) and note_path.is_absolute()
-        #     else self.vault_path / note_path
-        # ).resolve()
-
         new_path = (
             new_path
             if isinstance(new_path, Path) and new_path.is_absolute()
@@ -225,29 +227,14 @@ class ObsidianVault:
 
         new_path.parent.mkdir(parents=True, exist_ok=True)
 
-        old_entry = None
-
+        entry = None
         if self._cache is not None:
-            old_entry = self._cache.pop(old_path, None)
+            entry = self._cache.pop(old_path, None)
+        if entry is not None:
+            self._remove_cached_note(entry)
 
         old_path.rename(new_path)
-
-        if old_entry is not None:
-            old_entry.note.path = new_path
-            self._cache_note(
-                CachedNote(
-                    note=old_entry.note,
-                    mtime=new_path.stat().st_mtime_ns,
-                )
-            )
-
-            # Remove stale title index if title changed
-            if self._title_cache is not None:
-                self._title_cache[old_entry.note.title] = old_entry.note
-
-            return old_entry.note
-
-        note = ObsidianNote.from_file(new_path)
+        note.path = new_path
 
         if self._cache is not None:
             self._cache_note(
@@ -279,32 +266,23 @@ class ObsidianVault:
         if not new_name.endswith(".md"):
             new_name += ".md"
 
-        # new_path = old_path.with_name(new_name)
-        new_path = note.path.with_name(new_name)
-
-        return self.move(note, new_path)
+        return self.move(note, note.path.with_name(new_name))
 
     def delete(
         self,
-        note_path: str | Path,
+        note: ObsidianNote,
     ) -> None:
         """
         Delete a note from the vault.
         """
-        path = (self.vault_path / note_path).resolve()
+        path = note.path.resolve()
 
         if not path.exists():
             raise FileNotFoundError(path)
 
-        note = None
-
         if self._cache is not None:
-            entry = self._cache.pop(path, None)
-
+            entry = self._cache.get(path)
             if entry is not None:
-                note = entry.note
+                self._remove_cached_note(entry)
 
         path.unlink()
-
-        if note is not None and self._title_cache is not None:
-            self._title_cache.pop(note.title, None)
