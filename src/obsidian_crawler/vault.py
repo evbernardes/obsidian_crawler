@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+import time
 import warnings
 from dataclasses import dataclass
+from enum import Enum, auto
 from pathlib import Path
 from typing import Any, Iterator
 
 from .link import ObsidianLink
 from .note import ObsidianNote
 from .query import ObsidianQuery
+
+
+class VaultChange(Enum):
+    NEW = auto()
+    MODIFIED = auto()
+    REMOVED = auto()
 
 
 @dataclass(slots=True)
@@ -17,8 +25,10 @@ class CachedNote:
 
 
 class ObsidianVault:
-    def __init__(self, vault_path: str | Path):
+    def __init__(self, vault_path: str | Path, auto_update: bool = True):
+        self._last_scan: int
         self.vault_path = Path(vault_path)
+        self._auto_update: bool = auto_update
         self._cache: dict[Path, CachedNote] | None = None
         self._title_cache: dict[str, ObsidianNote] | None = None
 
@@ -103,6 +113,64 @@ class ObsidianVault:
         self._cache = None
         self._title_cache = None
 
+    def _detect_changes(self) -> dict[Path, VaultChange]:
+        """Returns paths of notes that changed on the disk"""
+        if self._cache is None:
+            raise RuntimeError(
+                "Cannot scan for changes if the Vault has not yet been loaded"
+            )
+
+        remaining = set(self._cache)
+
+        times_new = {
+            path.resolve(): path.stat().st_mtime_ns
+            for path in self.vault_path.rglob("*.md")
+        }
+
+        changes = {}
+        for path, time in times_new.items():
+            if path not in self._cache:
+                changes[path] = VaultChange.NEW
+                continue
+
+            remaining.remove(path)
+
+        if self._cache[path].mtime != time:
+            changes[path] = VaultChange.MODIFIED
+
+        for path in remaining:
+            changes[path] = VaultChange.REMOVED
+
+        return changes
+
+    def update(self) -> dict[Path, VaultChange]:
+
+        try:
+            changes = self._detect_changes()
+        except RuntimeError:
+            warnings.warn(
+                "Tried updating before loading for the first time, loading vault now...",
+                RuntimeWarning,
+            )
+            self.load()
+            return
+
+        for path, diff in changes.items():
+            if diff == VaultChange.NEW or diff == VaultChange.MODIFIED:
+                entry = self._load_note(path)
+                self._cache_note(entry)
+            if diff == VaultChange.REMOVED:
+                self._remove_cached_note(self._cache[path])
+
+        return changes
+
+    def _ensure_updated(self) -> None:
+        now = time.monotonic_ns()
+
+        if now - self._last_scan > 500_000_000:  # 0.5 s
+            self.update()
+            self._last_scan = now
+
     # ---------------------------------------------------------
     # Notes / Queries
     # ---------------------------------------------------------
@@ -114,8 +182,9 @@ class ObsidianVault:
         underlying file has changed on disk.
         """
         self.load()
-        for path in list(self._cache):
-            yield self.read_note(path)
+        if self._auto_update:
+            self._ensure_updated()
+        yield from (entry.note for entry in self._cache.values())
 
     def query(self) -> ObsidianQuery:
         return ObsidianQuery(self.notes)
@@ -124,6 +193,10 @@ class ObsidianVault:
         self,
         link: ObsidianLink | str,
     ) -> ObsidianNote | None:
+        self.load()
+        if self._auto_update:
+            self._ensure_updated()
+
         if self._title_cache is None:
             self._build_title_cache()
 
@@ -147,6 +220,9 @@ class ObsidianVault:
         If the note is cached, its modification time is checked.
         The note is transparently reloaded if the file changed.
         """
+        self.load()
+        if self._auto_update:
+            self._ensure_updated()
 
         path = (self.vault_path / note_path).resolve()
 
