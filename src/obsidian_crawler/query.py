@@ -1,14 +1,26 @@
+from __future__ import annotations
+
 from collections import defaultdict
+from collections.abc import Callable
+from typing import Any, Iterable, Iterator
+
+from .note import ObsidianNote
 
 
-def _resolve_key(key):
+def _resolve_key(
+    key: str | Callable[[ObsidianNote], Any],
+) -> Callable[[ObsidianNote], Any]:
     if callable(key):
         return key
     return lambda note: note.fm.get(key)
 
 
 class ObsidianQuery:
-    def __init__(self, source, pipeline=()):
+    def __init__(
+        self,
+        source: Callable[[], Iterable[ObsidianNote]],
+        pipeline: tuple[Callable[[Iterable[Any]], Iterable[Any]], ...] = (),
+    ):
         """
         source: callable returning a fresh iterable of notes
         pipeline: tuple of transformations
@@ -20,13 +32,13 @@ class ObsidianQuery:
     # Internal
     # --------------------------------------------------
 
-    def _clone(self, operation):
+    def _clone(self, operation) -> list[ObsidianQuery]:
         return ObsidianQuery(
             self._source,
             self._pipeline + (operation,),
         )
 
-    def _iter(self):
+    def _iter(self) -> Iterator[ObsidianNote]:
         notes = self._source()
 
         for operation in self._pipeline:
@@ -38,13 +50,16 @@ class ObsidianQuery:
     # Filtering
     # --------------------------------------------------
 
-    def where(self, predicate):
+    def where(
+        self,
+        predicate: Callable[[ObsidianNote], bool],
+    ) -> list[ObsidianQuery]:
         return self._clone(lambda notes: filter(predicate, notes))
 
-    def with_tag(self, tag):
+    def with_tag(self, tag: str) -> list[ObsidianQuery]:
         return self.where(lambda n: tag in n.tags)
 
-    def with_tags(self, *tags, require_all=True):
+    def with_tags(self, *tags: str, require_all: bool = True) -> list[ObsidianQuery]:
         if require_all:
             return self.where(lambda n: all(tag in n.tags for tag in tags))
 
@@ -54,37 +69,48 @@ class ObsidianQuery:
     # Projection
     # --------------------------------------------------
 
-    def map(self, func):
+    def map(
+        self,
+        func: Callable[[ObsidianNote], Any],
+    ) -> list[ObsidianQuery]:
         return self._clone(lambda notes: map(func, notes))
 
     # --------------------------------------------------
     # Ordering
     # --------------------------------------------------
 
-    def sort(self, key=None, reverse=False):
+    def sort(
+        self, key: Callable[[ObsidianNote], Any] | None = None, reverse: bool = False
+    ) -> list[ObsidianQuery]:
         return self._clone(lambda notes: sorted(notes, key=key, reverse=reverse))
 
     # --------------------------------------------------
     # Materialization
     # --------------------------------------------------
 
-    def all(self):
+    def all(self) -> list[ObsidianNote]:
         return list(self._iter())
 
-    def first(self):
+    def first(self) -> ObsidianNote | None:
         return next(self._iter(), None)
 
-    def find(self, predicate):
+    def find(
+        self,
+        predicate: Callable[[ObsidianNote], bool],
+    ) -> ObsidianNote | None:
         return next(filter(predicate, self._iter()), None)
 
-    def count(self):
+    def count(self) -> int:
         return sum(1 for _ in self._iter())
 
     # --------------------------------------------------
     # Dictionaries
     # --------------------------------------------------
 
-    def group_by(self, key):
+    def group_by(
+        self,
+        key: str | Callable[[ObsidianNote], Any],
+    ) -> dict[Any, list[ObsidianNote]]:
         key_func = _resolve_key(key)
 
         groups = defaultdict(list)
@@ -94,7 +120,13 @@ class ObsidianQuery:
 
         return dict(groups)
 
-    def group_by_many(self, group_key, key_sort=None, item_sort=None, reverse=False):
+    def group_by_many(
+        self,
+        group_key: str | Callable[[ObsidianNote], Any],
+        key_sort: Callable[[Any], Any] | None = None,
+        item_sort: Callable[[ObsidianNote], Any] | None = None,
+        reverse: bool = False,
+    ) -> dict[Any, list[ObsidianNote]]:
         key_func = _resolve_key(group_key)
         groups = defaultdict(list)
 
@@ -116,7 +148,10 @@ class ObsidianQuery:
 
         return dict(groups)
 
-    def index_by(self, key):
+    def index_by(
+        self,
+        key: str | Callable[[ObsidianNote], Any],
+    ) -> dict[Any, ObsidianNote]:
         key_func = _resolve_key(key)
 
         result = {}
@@ -141,8 +176,8 @@ class ObsidianQuery:
     # Python protocol
     # --------------------------------------------------
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[ObsidianNote]:
         return self._iter()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<ObsidianQuery operations={len(self._pipeline)}>"

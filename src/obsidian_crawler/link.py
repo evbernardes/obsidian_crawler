@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 
 _LINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 
 
-def _parse_links(text):
+def _parse_links(text: str) -> list[ObsidianLink]:
     links = []
 
     for match in _LINK_RE.finditer(text):

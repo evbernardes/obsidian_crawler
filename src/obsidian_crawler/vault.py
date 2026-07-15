@@ -1,7 +1,11 @@
+from __future__ import annotations
+
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any, Iterator
 
+from .link import ObsidianLink
 from .note import ObsidianNote
 from .query import ObsidianQuery
 
@@ -13,15 +17,15 @@ class CachedNote:
 
 
 class ObsidianVault:
-    def __init__(self, vault_path):
+    def __init__(self, vault_path: str | Path):
         self.vault_path = Path(vault_path)
-        self._cache = None
-        self._title_cache = None
+        self._cache: dict[Path, CachedNote] | None = None
+        self._title_cache: dict[str, ObsidianNote] | None = None
 
     # ---------------------------------------------------------
     # Cache management
     # ---------------------------------------------------------
-    def _load_note(self, path):
+    def _load_note(self, path: str | Path) -> CachedNote:
         """Load a single note and its metadata."""
         path = Path(path).resolve()
 
@@ -30,7 +34,7 @@ class ObsidianVault:
             mtime=path.stat().st_mtime_ns,
         )
 
-    def _cache_note(self, entry: CachedNote):
+    def _cache_note(self, entry: CachedNote) -> None:
         """
         Insert or replace a note in every cache/index.
         """
@@ -39,14 +43,14 @@ class ObsidianVault:
         if self._title_cache is not None:
             self._title_cache[entry.note.title] = entry.note
 
-    def _load_notes(self):
+    def _load_notes(self) -> dict[Path, CachedNote]:
         """Load the entire vault."""
         return {
             path.resolve(): self._load_note(path)
             for path in self.vault_path.rglob("*.md")
         }
 
-    def load(self):
+    def load(self) -> list[ObsidianVault]:
         """
         Explicitly populate the cache.
         """
@@ -54,7 +58,7 @@ class ObsidianVault:
             self._cache = self._load_notes()
         return self
 
-    def _build_title_cache(self):
+    def _build_title_cache(self) -> None:
         self.load()
 
         title_cache = {}
@@ -74,14 +78,14 @@ class ObsidianVault:
 
         self._title_cache = title_cache
 
-    def refresh(self):
+    def refresh(self) -> None:
         self._cache = None
         self._title_cache = None
 
     # ---------------------------------------------------------
     # Notes / Queries
     # ---------------------------------------------------------
-    def notes(self):
+    def notes(self) -> Iterator[ObsidianNote]:
         """
         Iterate over all notes.
 
@@ -92,10 +96,13 @@ class ObsidianVault:
         for path in list(self._cache):
             yield self.read_note(path)
 
-    def query(self):
+    def query(self) -> ObsidianQuery:
         return ObsidianQuery(self.notes)
 
-    def resolve_link(self, link):
+    def resolve_link(
+        self,
+        link: ObsidianLink | str,
+    ) -> ObsidianNote | None:
         if self._title_cache is None:
             self._build_title_cache()
 
@@ -106,10 +113,13 @@ class ObsidianVault:
     # ---------------------------------------------------------
     # Individual note access
     # ---------------------------------------------------------
-    def show_note(self, note_path):
+    def show_note(self, note_path: str | Path) -> None:
         self.read_note(note_path).show()
 
-    def read_note(self, note_path):
+    def read_note(
+        self,
+        note_path: str | Path,
+    ) -> ObsidianNote:
         """
         Read a note.
 
@@ -136,7 +146,7 @@ class ObsidianVault:
 
         return entry.note
 
-    def by_title(self, title):
+    def by_title(self, title: str) -> ObsidianNote:
         note = self.resolve_link(title)
 
         if note is None:
@@ -144,7 +154,12 @@ class ObsidianVault:
 
         return note
 
-    def write_note(self, note_path, fm, body, spaces=1):
+    def write_note(
+        self,
+        note_path: str | Path,
+        fm: dict[str, Any],
+        body: str,
+    ) -> None:
         path = self.vault_path / note_path
 
         note = ObsidianNote(
@@ -153,7 +168,7 @@ class ObsidianVault:
             body=body,
         )
 
-        note.write(spaces=spaces)
+        note.write()
 
         if self._cache is not None:
             self._cache_note(

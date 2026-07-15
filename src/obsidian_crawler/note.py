@@ -1,18 +1,24 @@
+from __future__ import annotations
+
 import hashlib
 import re
 from copy import deepcopy
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, Iterator
+
+if TYPE_CHECKING:
+    from .vault import ObsidianVault
 
 import yaml
 
-from .link import _parse_links
+from .link import ObsidianLink, _parse_links
 
 
-def _remove_dataviewjs_blocks(text):
+def _remove_dataviewjs_blocks(text: str) -> str:
     return re.sub(r"```dataviewjs\s*[\s\S]*?```", "", text, flags=re.IGNORECASE).strip()
 
 
-def _split_frontmatter(md_text: str):
+def _split_frontmatter(md_text: str) -> tuple[dict[str, Any], str]:
     """
     Extract YAML frontmatter from the beginning of a Markdown file.
 
@@ -43,28 +49,33 @@ def _split_frontmatter(md_text: str):
     return fm, body
 
 
-def _join_frontmatter(fm, body):
+def _join_frontmatter(fm: dict[str, Any], body: str) -> str:
     fm_yaml = yaml.dump(fm, sort_keys=False)
     return f"---\n{fm_yaml}---\n{body}"
 
 
 class ObsidianNote:
-    def _calculate_hash(self):
+    def _calculate_hash(self) -> str:
         # if content is None:
         return hashlib.sha256(
             _join_frontmatter(self.fm, self.body).encode("utf-8")
         ).hexdigest()
 
-    def _update_snapshot(self):
+    def _update_snapshot(self) -> None:
         self._original_content = {"fm": deepcopy(self.fm), "body": self.body}
         self._hash = self._calculate_hash()
         self._links = _parse_links(self.body)
 
-    def reset(self):
+    def reset(self) -> None:
         self.fm = deepcopy(self._original_content["fm"])
         self.body = self._original_content["body"]
 
-    def __init__(self, path, fm=None, body=None):
+    def __init__(
+        self,
+        path: str | Path,
+        fm: dict[str, Any] | None = None,
+        body: str | None = None,
+    ):
         self.path = path
         self.fm = {} if fm is None else fm
         self.body = "" if body is None else body
@@ -72,7 +83,7 @@ class ObsidianNote:
         self._update_snapshot()
 
     @classmethod
-    def from_file(cls, path):
+    def from_file(cls, path: str | Path) -> list[ObsidianNote]:
         path = Path(path)
         if not path.exists():
             raise FileNotFoundError(f"Note {path} does not exist.")
@@ -85,7 +96,7 @@ class ObsidianNote:
             body = content
         return cls(path=path, fm=fm, body=body)
 
-    def write(self, path=None):
+    def write(self, path: str | Path | None = None) -> bool:
         target = self.path if path is None else Path(path)
 
         if not self.modified and target == self.path:
@@ -99,37 +110,37 @@ class ObsidianNote:
 
         return True
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"<ObsidianNote {self.title}>"
 
     @property
-    def modified(self):
+    def modified(self) -> bool:
         return self._calculate_hash() != self._hash
 
     @property
-    def path(self):
+    def path(self) -> Path:
         return self._path
 
     @path.setter
-    def path(self, value):
+    def path(self, value: str | Path) -> None:
         self._path = Path(value)
 
     @property
-    def fm(self):
+    def fm(self) -> dict[str, Any]:
         return self._fm
 
     @fm.setter
-    def fm(self, value):
+    def fm(self, value: dict[str, Any]) -> None:
         if not isinstance(value, dict):
             raise TypeError("fm must be a dictionary")
         self._fm = value
 
     @property
-    def body(self):
+    def body(self) -> str:
         return self._body
 
     @body.setter
-    def body(self, value):
+    def body(self, value: str) -> None:
         if not isinstance(value, str):
             raise TypeError("body must be a string")
         self._body = value
@@ -140,19 +151,19 @@ class ObsidianNote:
         return _remove_dataviewjs_blocks(self.body)
 
     @property
-    def title(self):
+    def title(self) -> str:
         return self.path.stem
 
     @property
-    def body_without_dataviewjs(self):
+    def body_without_dataviewjs(self) -> str:
         return _remove_dataviewjs_blocks(self.body)
 
     @property
-    def tags(self):
+    def tags(self) -> list[str]:
         return self.fm.get("tags", [])
 
     @property
-    def as_json(self):
+    def as_json(self) -> dict[str, Any]:
         return {
             "path": str(self.path),
             "fm": self.fm,
@@ -160,16 +171,20 @@ class ObsidianNote:
         }
 
     @property
-    def links(self):
+    def links(self) -> list[ObsidianLink]:
         return self._links
 
-    def linked_notes(self, vault):
+    def linked_notes(
+        self,
+        vault: ObsidianVault,
+    ) -> Iterator[ObsidianNote]:
+
         for link in self.links:
             note = vault.resolve_link(link)
             if note is not None:
                 yield note
 
-    def show(self):
+    def show(self) -> None:
         print(
             f"Frontmatter:\n{yaml.dump(self.fm, sort_keys=False)}\nBody:\n{self.body}"
         )
