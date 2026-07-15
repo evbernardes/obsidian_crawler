@@ -165,7 +165,7 @@ class ObsidianNote:
 
     def linked_notes(self, vault):
         for link in self.links:
-            note = vault.resolve(link)
+            note = vault.resolve_link(link)
             if note is not None:
                 yield note
 

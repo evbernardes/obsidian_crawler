@@ -95,7 +95,7 @@ class ObsidianVault:
     def query(self):
         return ObsidianQuery(self.notes)
 
-    def resolve(self, link):
+    def resolve_link(self, link):
         if self._title_cache is None:
             self._build_title_cache()
 
@@ -137,7 +137,7 @@ class ObsidianVault:
         return entry.note
 
     def by_title(self, title):
-        note = self.resolve(title)
+        note = self.resolve_link(title)
 
         if note is None:
             raise KeyError(f"No note named '{title}'.")
