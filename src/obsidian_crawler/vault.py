@@ -38,7 +38,20 @@ class ObsidianVault:
         """
         Insert or replace a note in every cache/index.
         """
-        self._cache[entry.note.path.resolve()] = entry
+        # self._cache[entry.note.path.resolve()] = entry
+
+        # if self._title_cache is not None:
+        #     self._title_cache[entry.note.title] = entry.note
+
+        path = entry.note.path.resolve()
+
+        old_entry = self._cache.get(path)
+
+        if old_entry and self._title_cache is not None:
+            if old_entry.note.title != entry.note.title:
+                self._title_cache.pop(old_entry.note.title, None)
+
+        self._cache[path] = entry
 
         if self._title_cache is not None:
             self._title_cache[entry.note.title] = entry.note
@@ -154,6 +167,10 @@ class ObsidianVault:
 
         return note
 
+    # ---------------------------------------------------------
+    # Note writing and modification
+    # ---------------------------------------------------------
+
     def write_note(
         self,
         note_path: str | Path,
@@ -177,3 +194,117 @@ class ObsidianVault:
                     mtime=path.stat().st_mtime_ns,
                 )
             )
+
+    def move(
+        self,
+        note: ObsidianNote,
+        new_path: str | Path,
+    ) -> ObsidianNote:
+        """
+        Move a note to another location in the vault.
+        """
+        old_path = note.path.resolve()
+
+        # old_path = (
+        #     note_path
+        #     if isinstance(note_path, Path) and note_path.is_absolute()
+        #     else self.vault_path / note_path
+        # ).resolve()
+
+        new_path = (
+            new_path
+            if isinstance(new_path, Path) and new_path.is_absolute()
+            else self.vault_path / new_path
+        ).resolve()
+
+        if not old_path.exists():
+            raise FileNotFoundError(old_path)
+
+        if new_path.exists():
+            raise FileExistsError(new_path)
+
+        new_path.parent.mkdir(parents=True, exist_ok=True)
+
+        old_entry = None
+
+        if self._cache is not None:
+            old_entry = self._cache.pop(old_path, None)
+
+        old_path.rename(new_path)
+
+        if old_entry is not None:
+            old_entry.note.path = new_path
+            self._cache_note(
+                CachedNote(
+                    note=old_entry.note,
+                    mtime=new_path.stat().st_mtime_ns,
+                )
+            )
+
+            # Remove stale title index if title changed
+            if self._title_cache is not None:
+                self._title_cache[old_entry.note.title] = old_entry.note
+
+            return old_entry.note
+
+        note = ObsidianNote.from_file(new_path)
+
+        if self._cache is not None:
+            self._cache_note(
+                CachedNote(
+                    note=note,
+                    mtime=new_path.stat().st_mtime_ns,
+                )
+            )
+
+        return note
+
+    def rename(
+        self,
+        note: ObsidianNote,
+        new_name: str,
+    ) -> ObsidianNote:
+        """
+        Rename a note while keeping it in the same folder.
+
+        Parameters
+        ----------
+        note_path:
+            Existing note path relative to the vault.
+        new_name:
+            New filename. Can include or omit .md.
+        """
+        # old_path = (self.vault_path / note_path).resolve()
+
+        if not new_name.endswith(".md"):
+            new_name += ".md"
+
+        # new_path = old_path.with_name(new_name)
+        new_path = note.path.with_name(new_name)
+
+        return self.move(note, new_path)
+
+    def delete(
+        self,
+        note_path: str | Path,
+    ) -> None:
+        """
+        Delete a note from the vault.
+        """
+        path = (self.vault_path / note_path).resolve()
+
+        if not path.exists():
+            raise FileNotFoundError(path)
+
+        note = None
+
+        if self._cache is not None:
+            entry = self._cache.pop(path, None)
+
+            if entry is not None:
+                note = entry.note
+
+        path.unlink()
+
+        if note is not None and self._title_cache is not None:
+            self._title_cache.pop(note.title, None)
