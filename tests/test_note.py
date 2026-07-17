@@ -198,6 +198,16 @@ def test_write_read(tmp_path):
     assert loaded.body == note.body
     assert not loaded.modified
 
+    path2 = tmp_path / "note2.md"
+    assert note.write(path2)
+    assert path.exists()
+
+    loaded2 = ObsidianNote.from_file(path2)
+    assert loaded2.fm == note.fm
+    assert loaded2.body == note.body
+
+    assert path != path2
+
 
 def test_write_updates_modified_flag(tmp_path):
     path = tmp_path / "note.md"
