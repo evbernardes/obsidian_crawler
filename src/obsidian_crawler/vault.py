@@ -24,9 +24,12 @@ class CachedNote:
     mtime: int
 
 
+LAST_SCAN_DELTA = 500_000_000  # 0.5 s
+
+
 class ObsidianVault:
     def __init__(self, vault_path: str | Path, auto_update: bool = True):
-        self._last_scan: int
+        self._last_scan: int = -LAST_SCAN_DELTA
         self.vault_path = Path(vault_path)
         self._auto_update: bool = auto_update
         self._cache: dict[Path, CachedNote] | None = None
@@ -135,8 +138,8 @@ class ObsidianVault:
 
             remaining.remove(path)
 
-        if self._cache[path].mtime != time:
-            changes[path] = VaultChange.MODIFIED
+            if self._cache[path].mtime != time:
+                changes[path] = VaultChange.MODIFIED
 
         for path in remaining:
             changes[path] = VaultChange.REMOVED
@@ -167,7 +170,7 @@ class ObsidianVault:
     def _ensure_updated(self) -> None:
         now = time.monotonic_ns()
 
-        if now - self._last_scan > 500_000_000:  # 0.5 s
+        if now - self._last_scan > LAST_SCAN_DELTA:
             self.update()
             self._last_scan = now
 
