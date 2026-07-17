@@ -99,8 +99,10 @@ class ObsidianNote:
     def write(self, path: str | Path | None = None) -> bool:
         target = self.path if path is None else Path(path)
 
-        if not self.modified and target == self.path:
-            return False
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        # if not self.modified and target == self.path:
+        #     return False
 
         content = _join_frontmatter(self.fm, self.body)
         target.write_text(content, encoding="utf-8")

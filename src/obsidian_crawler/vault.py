@@ -5,7 +5,7 @@ import warnings
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Iterator
 
 from .link import ObsidianLink
 from .note import ObsidianNote
@@ -258,19 +258,16 @@ class ObsidianVault:
     # Note writing and modification
     # ---------------------------------------------------------
 
-    def write(
-        self,
-        note_path: str | Path,
-        fm: dict[str, Any],
-        body: str,
-    ) -> None:
-        path = self.vault_path / note_path
+    def write(self, note: ObsidianNote) -> bool:
+        if not note.modified:
+            return False
+        # path = self.vault_path / note_path
 
-        note = ObsidianNote(
-            path=path,
-            fm=fm,
-            body=body,
-        )
+        # note = ObsidianNote(
+        #     path=path,
+        #     fm=fm,
+        #     body=body,
+        # )
 
         note.write()
 
@@ -278,9 +275,11 @@ class ObsidianVault:
             self._cache_note(
                 CachedNote(
                     note=note,
-                    mtime=path.stat().st_mtime_ns,
+                    mtime=note.path.stat().st_mtime_ns,
                 )
             )
+
+        return True
 
     def move(
         self,
