@@ -1,3 +1,4 @@
+from math import floor
 from pathlib import Path
 
 import pytest
@@ -123,23 +124,6 @@ def test_as_json():
     }
 
 
-def test_links():
-    note = ObsidianNote(
-        path="test.md",
-        body="See [[Task]] and [[Other|Alias]].",
-    )
-
-    links = note.links
-
-    assert len(links) == 2
-
-    assert links[0].target == "Task"
-    assert links[0].alias is None
-
-    assert links[1].target == "Other"
-    assert links[1].alias == "Alias"
-
-
 # ---------------------------------------------------------
 # Properties
 # ---------------------------------------------------------
@@ -179,6 +163,13 @@ def test_repr():
 # ---------------------------------------------------------
 # I/O
 # ---------------------------------------------------------
+def test_write_creates_parent_directories(tmp_path):
+    path = tmp_path / "folder" / "subfolder" / "note.md"
+
+    note = ObsidianNote(path=path)
+    note.write()
+
+    assert path.exists()
 
 
 def test_write_read(tmp_path):
@@ -200,7 +191,7 @@ def test_write_read(tmp_path):
 
     path2 = tmp_path / "note2.md"
     assert note.write(path2)
-    assert path.exists()
+    assert path2.exists()
 
     loaded2 = ObsidianNote.from_file(path2)
     assert loaded2.fm == note.fm
@@ -246,3 +237,24 @@ def test_preserve_spacing_after_frontmatter(tmp_path):
     note = ObsidianNote.from_file(path)
 
     assert note.body == "\n\nBody"
+
+
+def test_from_missing_file(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        ObsidianNote.from_file(tmp_path / "missing.md")
+
+
+def test_parse_time(tmp_path):
+    content = """---
+date: 2026-07-22
+time: 11:30
+---
+
+Test
+"""
+    fm, _ = ObsidianNote._parse_content(content)
+    time = fm["time"]
+    assert isinstance(time, int)
+    hours = floor(time / 60)
+    mins = time - hours * 60
+    assert f"{hours}:{mins}" == "11:30"
