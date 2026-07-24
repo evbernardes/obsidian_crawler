@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from obsidian_crawler.note import ObsidianNote
-from obsidian_crawler.parsers import parse_content
+from obsidian_crawler.parsers import fuse_blocks, parse_content
 
 
 def test_create_note():
@@ -264,3 +264,43 @@ Test
     hours = floor(time / 60)
     mins = time - hours * 60
     assert f"{hours}:{mins}" == time_input
+
+
+def test_blocks():
+    note = ObsidianNote(
+        "note.md",
+        body="""Hello
+
+```python
+print("Hello")
+```
+
+Some text
+
+```dataview
+TABLE file.name
+```
+
+Bye""",
+    )
+
+    blocks = note.blocks
+
+    assert len(blocks) == 5
+
+    assert blocks[0].type == "text"
+    assert blocks[0].content == "Hello\n\n"
+
+    assert blocks[1].type == "python"
+    assert blocks[1].content == 'print("Hello")\n'
+
+    assert blocks[2].type == "text"
+    assert blocks[2].content == "\nSome text\n\n"
+
+    assert blocks[3].type == "dataview"
+    assert blocks[3].content == "TABLE file.name\n"
+
+    assert blocks[4].type == "text"
+    assert blocks[4].content == "\nBye"
+
+    assert fuse_blocks(note.blocks) == note.body

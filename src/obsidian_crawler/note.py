@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 import yaml
 
 from .link import ObsidianLink, _parse_links
-from .parsers import fuse_content, parse_content
+from .parsers import fuse_content, parse_blocks, parse_content
 
 
 def _remove_dataviewjs_blocks(text: str) -> str:
@@ -117,6 +117,10 @@ class ObsidianNote:
     @property
     def body_without_dataview_blocks(self):
         return _remove_dataviewjs_blocks(self.body)
+
+    @property
+    def blocks(self) -> list[MarkdownBlock]:
+        return parse_blocks(self.body)
 
     @property
     def title(self) -> str:
