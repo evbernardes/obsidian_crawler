@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import hashlib
 import re
+from collections.abc import Iterator
 from copy import deepcopy
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from .vault import ObsidianVault
@@ -12,6 +13,7 @@ if TYPE_CHECKING:
 import yaml
 
 from .link import ObsidianLink, _parse_links
+from .parsers import fuse_content, parse_content
 
 
 def _remove_dataviewjs_blocks(text: str) -> str:
@@ -22,47 +24,13 @@ class ObsidianNote:
     def _calculate_hash(self) -> str:
         # if content is None:
         return hashlib.sha256(
-            ObsidianNote._fuse_content(self.fm, self.body).encode("utf-8")
+            fuse_content(self.fm, self.body).encode("utf-8")
         ).hexdigest()
 
     def _update_snapshot(self) -> None:
         self._original_content = {"fm": deepcopy(self.fm), "body": self.body}
         self._hash = self._calculate_hash()
         self._links = _parse_links(self.body)
-
-    def _parse_content(md_text: str) -> tuple[dict[str, Any], str]:
-        """
-        Extract YAML frontmatter from the beginning of a Markdown file.
-
-        Returns
-        -------
-        (frontmatter: dict, body: str)
-
-        Raises
-        ------
-        ValueError
-            If the file does not begin with valid YAML frontmatter.
-        """
-        lines = md_text.splitlines(keepends=True)
-
-        if not lines or lines[0].strip() != "---":
-            raise ValueError("File does not start with YAML frontmatter.")
-
-        try:
-            end = next(i for i in range(1, len(lines)) if lines[i].strip() == "---")
-        except StopIteration:
-            raise ValueError("Closing YAML delimiter not found.")
-
-        yaml_text = "".join(lines[1:end])
-        body = "".join(lines[end + 1 :])
-
-        fm = yaml.safe_load(yaml_text) or {}
-
-        return fm, body
-
-    def _fuse_content(fm: dict[str, Any], body: str) -> str:
-        fm_yaml = yaml.dump(fm, sort_keys=False)
-        return f"---\n{fm_yaml}---\n{body}"
 
     def reset(self) -> None:
         self.fm = deepcopy(self._original_content["fm"])
@@ -87,7 +55,7 @@ class ObsidianNote:
             raise FileNotFoundError(f"Note {path} does not exist.")
         content = path.read_text()
         try:
-            fm, body = ObsidianNote._parse_content(content)
+            fm, body = parse_content(content)
         except ValueError:
             # print(f"Error parsing {path}: {e}")
             fm = {}
@@ -102,7 +70,7 @@ class ObsidianNote:
         # if not self.modified and target == self.path:
         #     return False
 
-        content = ObsidianNote._fuse_content(self.fm, self.body)
+        content = fuse_content(self.fm, self.body)
         target.write_text(content, encoding="utf-8")
 
         self.path = target

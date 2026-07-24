@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 
 from obsidian_crawler.note import ObsidianNote
+from obsidian_crawler.parsers import parse_content
 
 
 def test_create_note():
@@ -244,17 +245,22 @@ def test_from_missing_file(tmp_path):
         ObsidianNote.from_file(tmp_path / "missing.md")
 
 
-def test_parse_time(tmp_path):
-    content = """---
+def test_parse_time():
+    time_input = "11:30"
+    content = (
+        """---
 date: 2026-07-22
-time: 11:30
+time: """
+        + time_input
+        + """
 ---
 
 Test
 """
-    fm, _ = ObsidianNote._parse_content(content)
+    )
+    fm, _ = parse_content(content)
     time = fm["time"]
     assert isinstance(time, int)
     hours = floor(time / 60)
     mins = time - hours * 60
-    assert f"{hours}:{mins}" == "11:30"
+    assert f"{hours}:{mins}" == time_input
