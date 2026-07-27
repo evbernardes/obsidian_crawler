@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 import yaml
 
+from .block import MarkdownBlock
 from .link import ObsidianLink, _parse_links
 from .parsers import fuse_content, parse_blocks, parse_content
 

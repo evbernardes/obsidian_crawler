@@ -304,3 +304,60 @@ Bye""",
     assert blocks[4].content == "\nBye"
 
     assert fuse_blocks(note.blocks) == note.body
+
+
+def test_blocks_alternate():
+
+    text = """
+Testando
+123"""
+
+    block = """
+```python
+print("Hello")
+```"""
+
+    content = f"{text}\n{block}"
+    note = ObsidianNote("note.md", body=content)
+    assert fuse_blocks(note.blocks) == note.body
+
+    content = f"{text}\n\n{block}"
+    note = ObsidianNote("note.md", body=content)
+    assert fuse_blocks(note.blocks) == note.body
+
+    content = f"\n\n{text}\n\n\n{block}"
+    note = ObsidianNote("note.md", body=content)
+    assert fuse_blocks(note.blocks) == note.body
+    assert fuse_blocks(note.blocks) == note.body
+
+    content = f"{block}\n{text}"
+    note = ObsidianNote("note.md", body=content)
+    assert fuse_blocks(note.blocks) == note.body
+
+    content = f"{block}\n\n{text}"
+    note = ObsidianNote("note.md", body=content)
+    assert fuse_blocks(note.blocks) == note.body
+
+    content = f"\n\n{block}\n\n\n{text}"
+    note = ObsidianNote("note.md", body=content)
+    assert fuse_blocks(note.blocks) == note.body
+    assert fuse_blocks(note.blocks) == note.body
+
+    content = f"\n\n{block}\n\n\n{text}\n\n"
+    note = ObsidianNote("note.md", body=content)
+    assert fuse_blocks(note.blocks) == note.body
+    assert fuse_blocks(note.blocks) == note.body
+
+    content = f"\n\n{block}\n\n\n\n{block}\n\n{text}\n\n"
+    note = ObsidianNote("note.md", body=content)
+    assert fuse_blocks(note.blocks) == note.body
+    assert fuse_blocks(note.blocks) == note.body
+
+    content = f"\n\n{block}{text}\n\n"
+    note = ObsidianNote("note.md", body=content)
+    assert fuse_blocks(note.blocks) == note.body
+    assert fuse_blocks(note.blocks) == note.body
+
+    # content = f"\n{text}\n{block}\n"
+    # note = ObsidianNote("note.md", body=content)
+    # assert fuse_blocks(note.blocks) == note.body
