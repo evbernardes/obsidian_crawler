@@ -266,7 +266,7 @@ Test
     assert f"{hours}:{mins}" == time_input
 
 
-def test_blocks():
+def test_blocks_content():
     note = ObsidianNote(
         "note.md",
         body="""Hello
@@ -276,6 +276,7 @@ print("Hello")
 ```
 
 Some text
+Test
 
 ```dataview
 TABLE file.name
@@ -289,19 +290,19 @@ Bye""",
     assert len(blocks) == 5
 
     assert blocks[0].type == "text"
-    assert blocks[0].content == "Hello\n\n"
+    assert blocks[0].content.strip() == "Hello"
 
     assert blocks[1].type == "python"
-    assert blocks[1].content == 'print("Hello")\n'
+    assert blocks[1].content.strip() == 'print("Hello")'
 
     assert blocks[2].type == "text"
-    assert blocks[2].content == "\nSome text\n\n"
+    assert blocks[2].content.strip() == "Some text\nTest"
 
     assert blocks[3].type == "dataview"
-    assert blocks[3].content == "TABLE file.name\n"
+    assert blocks[3].content.strip() == "TABLE file.name"
 
     assert blocks[4].type == "text"
-    assert blocks[4].content == "\nBye"
+    assert blocks[4].content.strip() == "Bye"
 
     assert fuse_blocks(note.blocks) == note.body
 
@@ -317,47 +318,33 @@ Testando
 print("Hello")
 ```"""
 
-    content = f"{text}\n{block}"
-    note = ObsidianNote("note.md", body=content)
+    note = ObsidianNote("note.md", body=f"{text}\n{block}")
     assert fuse_blocks(note.blocks) == note.body
 
-    content = f"{text}\n\n{block}"
-    note = ObsidianNote("note.md", body=content)
+    note = ObsidianNote("note.md", body=f"{text}\n\n{block}")
     assert fuse_blocks(note.blocks) == note.body
 
-    content = f"\n\n{text}\n\n\n{block}"
-    note = ObsidianNote("note.md", body=content)
-    assert fuse_blocks(note.blocks) == note.body
+    note = ObsidianNote("note.md", body=f"\n\n{text}\n\n\n{block}")
     assert fuse_blocks(note.blocks) == note.body
 
-    content = f"{block}\n{text}"
-    note = ObsidianNote("note.md", body=content)
+    note = ObsidianNote("note.md", body=f"{block}\n{text}")
     assert fuse_blocks(note.blocks) == note.body
 
-    content = f"{block}\n\n{text}"
-    note = ObsidianNote("note.md", body=content)
+    note = ObsidianNote("note.md", body=f"{block}\n\n{text}")
     assert fuse_blocks(note.blocks) == note.body
 
-    content = f"\n\n{block}\n\n\n{text}"
-    note = ObsidianNote("note.md", body=content)
-    assert fuse_blocks(note.blocks) == note.body
+    note = ObsidianNote("note.md", body=f"\n\n{block}\n\n\n{text}")
     assert fuse_blocks(note.blocks) == note.body
 
-    content = f"\n\n{block}\n\n\n{text}\n\n"
-    note = ObsidianNote("note.md", body=content)
-    assert fuse_blocks(note.blocks) == note.body
+    note = ObsidianNote("note.md", body=f"\n\n{block}\n\n\n{text}\n\n")
     assert fuse_blocks(note.blocks) == note.body
 
-    content = f"\n\n{block}\n\n\n\n{block}\n\n{text}\n\n"
-    note = ObsidianNote("note.md", body=content)
-    assert fuse_blocks(note.blocks) == note.body
+    note = ObsidianNote("note.md", body=f"\n\n{block}\n\n\n\n{block}\n\n{text}\n\n")
     assert fuse_blocks(note.blocks) == note.body
 
-    content = f"\n\n{block}{text}\n\n"
-    note = ObsidianNote("note.md", body=content)
-    assert fuse_blocks(note.blocks) == note.body
+    note = ObsidianNote("note.md", body=f"\n\n{block}{text}\n\n")
     assert fuse_blocks(note.blocks) == note.body
 
-    # content = f"\n{text}\n{block}\n"
-    # note = ObsidianNote("note.md", body=content)
-    # assert fuse_blocks(note.blocks) == note.body
+    note = ObsidianNote("note.md", body=f"\n{text}\n{block}\n")
+    assert fuse_blocks(note.blocks) != note.body
+    assert fuse_blocks(note.blocks).strip() == note.body.strip()

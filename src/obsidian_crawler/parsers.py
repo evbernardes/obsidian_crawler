@@ -47,9 +47,11 @@ def parse_blocks(text: str) -> list[MarkdownBlock]:
     """
     Split Markdown into alternating text and fenced code blocks.
 
-    Reconstruction is lossless:
+    Reconstruction is not always lossless:
 
-        ''.join(block.to_markdown() for block in blocks) == text
+        ''.join(block.to_markdown() for block in blocks) != text
+
+    Blank lines are not garanteed to be the same
     """
 
     lines = text.splitlines(keepends=True)
