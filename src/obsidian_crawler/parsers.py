@@ -1,8 +1,23 @@
+from datetime import datetime
 from typing import Any
 
 import yaml
 
 from .block import MarkdownBlock
+
+
+class Dumper(yaml.SafeDumper):
+    pass
+
+
+def represent_datetime(dumper, data):
+    return dumper.represent_scalar(
+        "tag:yaml.org,2002:timestamp",
+        data.isoformat(),  # Uses "T"
+    )
+
+
+Dumper.add_representer(datetime, represent_datetime)
 
 
 def _find_fence(
@@ -39,7 +54,7 @@ def parse_content(md_text: str) -> tuple[dict[str, Any], str]:
 
 
 def fuse_content(fm: dict[str, Any], body: str) -> str:
-    fm_yaml = yaml.dump(fm, sort_keys=False)
+    fm_yaml = yaml.dump(fm, Dumper=Dumper, sort_keys=False)
     return f"---\n{fm_yaml}---\n{body}"
 
 
