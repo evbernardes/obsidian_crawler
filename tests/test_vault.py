@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from obsidian_crawler import ObsidianVault
+from obsidian_crawler import ObsidianNote, ObsidianVault
 
 # ---------------------------------------------------------
 # Helpers
@@ -10,16 +10,8 @@ from obsidian_crawler import ObsidianVault
 
 
 def create_note(path: Path, title: str, **fm):
-    path.mkdir(parents=True, exist_ok=True)
-
-    note = path / f"{title}.md"
-
-    frontmatter = "\n".join(f"{k}: {v}" for k, v in fm.items())
-
-    note.write_text(
-        f"---\n{frontmatter}\n---\n\nBody",
-        encoding="utf-8",
-    )
+    note = ObsidianNote((Path(path) / title).with_suffix(".md"), fm, "")
+    note.write()
 
     return note
 
@@ -207,16 +199,55 @@ def test_duplicate_titles_warning(tmp_path):
 
 
 # ---------------------------------------------------------
-# Update
+# Auto Update
+# ---------------------------------------------------------
+
+
+def test_detects_new_note(tmp_path):
+    create_note(tmp_path, "A")
+
+    vault = ObsidianVault(tmp_path).load()
+
+    create_note(tmp_path, "B")
+
+    assert vault.resolve_link("B") is not None
+
+
+def test_detects_deleted_note(tmp_path):
+    create_note(tmp_path, "A")
+
+    vault = ObsidianVault(tmp_path).load()
+
+    (tmp_path / "A.md").unlink()
+
+    assert vault.resolve_link("A") is None
+
+
+def test_detects_modified_note(tmp_path):
+    create_note(tmp_path, "Task", status="old")
+
+    vault = ObsidianVault(tmp_path).load()
+
+    (tmp_path / "Task.md").write_text("---\nstatus: new\n---\n\nBody")
+
+    note = vault.resolve_link("Task")
+
+    assert note.fm["status"] == "new"
+
+
+# ---------------------------------------------------------
+# Manual Update
 # ---------------------------------------------------------
 
 
 def test_update_detects_new_note(tmp_path):
     create_note(tmp_path, "A")
 
-    vault = ObsidianVault(tmp_path).load()
+    vault = ObsidianVault(tmp_path, auto_update=False).load()
 
     create_note(tmp_path, "B")
+
+    assert vault.resolve_link("B") is None
 
     vault.update()
 
@@ -226,9 +257,11 @@ def test_update_detects_new_note(tmp_path):
 def test_update_detects_deleted_note(tmp_path):
     create_note(tmp_path, "A")
 
-    vault = ObsidianVault(tmp_path).load()
+    vault = ObsidianVault(tmp_path, auto_update=False).load()
 
     (tmp_path / "A.md").unlink()
+
+    assert vault.resolve_link("A") is not None
 
     vault.update()
 
@@ -238,12 +271,13 @@ def test_update_detects_deleted_note(tmp_path):
 def test_update_detects_modified_note(tmp_path):
     create_note(tmp_path, "Task", status="old")
 
-    vault = ObsidianVault(tmp_path).load()
+    vault = ObsidianVault(tmp_path, auto_update=False).load()
 
     (tmp_path / "Task.md").write_text("---\nstatus: new\n---\n\nBody")
 
-    vault.update()
-
     note = vault.resolve_link("Task")
+    assert note.fm["status"] == "old"
 
+    vault.update()
+    note = vault.resolve_link("Task")
     assert note.fm["status"] == "new"
