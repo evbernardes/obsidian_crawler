@@ -75,11 +75,3 @@ class ObsidianLink:
             target += f"^{self.block}"
 
         return target
-
-    # def __eq__(self, other: ObsidianLink) -> bool:
-    #     return (
-    #         self.target == other.target
-    #         and self.alias == other.alias
-    #         and self.heading == other.heading
-    #         and self.block == other.block
-    #     )
