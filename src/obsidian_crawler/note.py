@@ -63,6 +63,11 @@ class ObsidianNote:
             body = content
         return cls(path=path, fm=fm, body=body)
 
+    def copy(self) -> ObsidianNote:
+        return ObsidianNote(
+            path=self.path, fm=deepcopy(self.fm), body=deepcopy(self.body)
+        )
+
     def write(self, path: str | Path | None = None) -> bool:
         target = self.path if path is None else Path(path)
 
@@ -126,6 +131,10 @@ class ObsidianNote:
     @property
     def title(self) -> str:
         return self.path.stem
+
+    @title.setter
+    def title(self, value: str) -> None:
+        self.path.with_stem(value)
 
     @property
     def body_without_dataviewjs(self) -> str:
