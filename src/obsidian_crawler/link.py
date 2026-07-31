@@ -17,10 +17,13 @@ def _parse_links(text: str) -> list[ObsidianLink]:
         heading = None
         block = None
 
+        # Parse block first
+        if "^" in target:
+            target, block = target.split("^", 1)
+
+        # Then heading
         if "#" in target:
             target, heading = target.split("#", 1)
-        elif "^" in target:
-            target, block = target.split("^", 1)
 
         links.append(
             ObsidianLink(
@@ -40,3 +43,43 @@ class ObsidianLink:
     alias: str | None = None
     heading: str | None = None
     block: str | None = None
+
+    def to_markdown(self) -> str:
+        target = self.target
+
+        if self.heading is not None:
+            target += f"#{self.heading}"
+
+        if self.block is not None:
+            target += f"^{self.block}"
+
+        if self.alias is not None:
+            target += f"|{self.alias}"
+
+        return f"[[{target}]]"
+
+    def render(self) -> str:
+        """
+        Return the text displayed by Obsidian in Reading View.
+        """
+
+        if self.alias is not None:
+            return self.alias
+
+        target = self.target
+
+        if self.heading is not None:
+            target += f"#{self.heading}"
+
+        if self.block is not None:
+            target += f"^{self.block}"
+
+        return target
+
+    # def __eq__(self, other: ObsidianLink) -> bool:
+    #     return (
+    #         self.target == other.target
+    #         and self.alias == other.alias
+    #         and self.heading == other.heading
+    #         and self.block == other.block
+    #     )
