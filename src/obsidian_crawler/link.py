@@ -6,35 +6,35 @@ from dataclasses import dataclass
 _LINK_RE = re.compile(r"\[\[([^\]]+)\]\]")
 
 
-def _parse_links(text: str) -> list[ObsidianLink]:
-    links = []
+# def _parse_links(text: str) -> list[ObsidianLink]:
+#     links = []
 
-    for match in _LINK_RE.finditer(text):
-        raw = match.group(1)
+#     for match in _LINK_RE.finditer(text):
+#         raw = match.group(1)
 
-        target, alias = (raw.split("|", 1) + [None])[:2]
+#         target, alias = (raw.split("|", 1) + [None])[:2]
 
-        heading = None
-        block = None
+#         heading = None
+#         block = None
 
-        # Parse block first
-        if "^" in target:
-            target, block = target.split("^", 1)
+#         # Parse block first
+#         if "^" in target:
+#             target, block = target.split("^", 1)
 
-        # Then heading
-        if "#" in target:
-            target, heading = target.split("#", 1)
+#         # Then heading
+#         if "#" in target:
+#             target, heading = target.split("#", 1)
 
-        links.append(
-            ObsidianLink(
-                target=target,
-                alias=alias,
-                heading=heading,
-                block=block,
-            )
-        )
+#         links.append(
+#             ObsidianLink(
+#                 target=target,
+#                 alias=alias,
+#                 heading=heading,
+#                 block=block,
+#             )
+#         )
 
-    return links
+#     return links
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,3 +75,34 @@ class ObsidianLink:
             target += f"^{self.block}"
 
         return target
+
+    @staticmethod
+    def parse(text: str) -> list[ObsidianLink]:
+        links = []
+
+        for match in _LINK_RE.finditer(text):
+            raw = match.group(1)
+
+            target, alias = (raw.split("|", 1) + [None])[:2]
+
+            heading = None
+            block = None
+
+            # Parse block first
+            if "^" in target:
+                target, block = target.split("^", 1)
+
+            # Then heading
+            if "#" in target:
+                target, heading = target.split("#", 1)
+
+            links.append(
+                ObsidianLink(
+                    target=target,
+                    alias=alias,
+                    heading=heading,
+                    block=block,
+                )
+            )
+
+        return links

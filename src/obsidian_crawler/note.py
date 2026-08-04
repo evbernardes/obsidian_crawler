@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 import yaml
 
 from .block import MarkdownBlock
-from .link import ObsidianLink, _parse_links
+from .link import ObsidianLink
 from .parsers import fuse_content, parse_blocks, parse_content
 
 
@@ -31,7 +31,7 @@ class ObsidianNote:
     def _update_snapshot(self) -> None:
         self._original_content = {"fm": deepcopy(self.fm), "body": self.body}
         self._hash = self._calculate_hash()
-        self._links = _parse_links(self.body)
+        self._links = ObsidianLink.parse(self.body)
 
     def reset(self) -> None:
         self.fm = deepcopy(self._original_content["fm"])
@@ -118,7 +118,7 @@ class ObsidianNote:
         if not isinstance(value, str):
             raise TypeError("body must be a string")
         self._body = value
-        self._links = _parse_links(value)
+        self._links = ObsidianLink.parse(value)
 
     @property
     def body_without_dataview_blocks(self):

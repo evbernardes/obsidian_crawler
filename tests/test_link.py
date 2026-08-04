@@ -1,4 +1,4 @@
-from obsidian_crawler.link import ObsidianLink, _parse_links
+from obsidian_crawler.link import ObsidianLink
 from obsidian_crawler.note import ObsidianNote
 
 
@@ -42,7 +42,7 @@ def test_alias():
 
     assert link.to_markdown() == "[[Task|My Task]]"
     assert link.render() == "My Task"
-    assert _parse_links(link.to_markdown())[0] == link
+    assert ObsidianLink.parse(link.to_markdown())[0] == link
 
 
 def test_heading():
@@ -53,7 +53,7 @@ def test_heading():
 
     assert link.to_markdown() == "[[Task#Introduction]]"
     assert link.render() == "Task#Introduction"
-    assert _parse_links(link.to_markdown())[0] == link
+    assert ObsidianLink.parse(link.to_markdown())[0] == link
 
 
 def test_block():
@@ -64,7 +64,7 @@ def test_block():
 
     assert link.to_markdown() == "[[Task^abc123]]"
     assert link.render() == "Task^abc123"
-    assert _parse_links(link.to_markdown())[0] == link
+    assert ObsidianLink.parse(link.to_markdown())[0] == link
 
 
 def test_heading_alias():
@@ -76,7 +76,7 @@ def test_heading_alias():
 
     assert link.to_markdown() == "[[Task#Introduction|Intro]]"
     assert link.render() == "Intro"
-    assert _parse_links(link.to_markdown())[0] == link
+    assert ObsidianLink.parse(link.to_markdown())[0] == link
 
 
 def test_heading_block_alias():
@@ -89,11 +89,11 @@ def test_heading_block_alias():
 
     assert link.to_markdown() == "[[Task#Introduction^123|Intro]]"
     assert link.render() == "Intro"
-    assert _parse_links(link.to_markdown())[0] == link
+    assert ObsidianLink.parse(link.to_markdown())[0] == link
 
 
 def test_parse_links():
-    links = _parse_links("See [[Task]], [[Other#Section]] and [[Third|Alias]].")
+    links = ObsidianLink.parse("See [[Task]], [[Other#Section]] and [[Third|Alias]].")
 
     assert links == [
         ObsidianLink("Task"),
