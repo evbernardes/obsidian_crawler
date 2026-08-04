@@ -1,3 +1,4 @@
+from .autolinker import ObsidianAutoLinker
 from .block import MarkdownBlock
 from .link import ObsidianLink
 from .note import ObsidianNote
@@ -7,6 +8,7 @@ from .vault import ObsidianVault
 
 __all__ = [
     "MarkdownBlock",
+    "ObsidianAutoLinker",
     "ObsidianLink",
     "ObsidianNote",
     "ObsidianQuery",
