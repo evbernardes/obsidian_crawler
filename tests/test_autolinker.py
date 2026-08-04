@@ -118,3 +118,28 @@ def test_two_notes_overlapping_bad_order(tmp_path):
         linker.run(text)
         == "This is a test for [[T6.2 Using LLM concepts|T6.2]], which is [[T6.2 Using LLM concepts|T6.2]] Using [[Large Language Model|LLM]] concepts."
     )
+
+
+def test_single_note_extra_delimiter(tmp_path):
+    vault = ObsidianVault(tmp_path)
+
+    ObsidianNote(".", fm={"tags": ["task"], "aliases": ["T1.2"]}).write(
+        vault.vault_path / "T1.2 test Task.md"
+    )
+
+    linker = ObsidianAutoLinker()
+    linker.add_notes(vault.query().with_tag("task"))
+
+    # This is not what I want
+    text = "This is a test for T1.2 and T1.2.4"
+    assert (
+        linker.run(text)
+        == "This is a test for [[T1.2 test Task|T1.2]] and [[T1.2 test Task|T1.2]].4"
+    )
+
+    linker = ObsidianAutoLinker()
+    linker.add_notes(vault.query().with_tag("task"), extra_boundary_chars=".")
+
+    # This is not what I want
+    text = "This is a test for T1.2 and T1.2.4"
+    assert linker.run(text) == "This is a test for [[T1.2 test Task|T1.2]] and T1.2.4"
