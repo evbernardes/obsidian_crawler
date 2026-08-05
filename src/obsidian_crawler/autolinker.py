@@ -35,6 +35,13 @@ class ObsidianAutoLinker:
         self._word_chars: dict[str, str] = {}
 
     def _add_link(self, key: str, link: ObsidianLink, word_chars: str = "") -> None:
+
+        if key in self._links:
+            warn(
+                f"'{key}' already links to '{self._links[key].target}', "
+                f"overwriting with '{link.target}'."
+            )
+
         self._links[key] = link
         self._word_chars[key] = word_chars
 
