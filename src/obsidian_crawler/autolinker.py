@@ -52,10 +52,11 @@ class ObsidianAutoLinker:
 
         if key in self._link_rules:
             warn(
-                f"'{key}' already links to '{self._link_rules[key].link.target}', "
-                f"overwriting with '{link.target}'."
+                f"Duplicate auto-link trigger '{key}'. "
+                f"'{self._link_rules[key].link.to_markdown()}' "
+                f"will be replaced by "
+                f"'{link.to_markdown()}'."
             )
-
         self._link_rules[key] = LinkRule(link, whole_words, extra_word_chars)
 
     def add_notes(
