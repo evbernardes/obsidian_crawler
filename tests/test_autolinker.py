@@ -190,7 +190,16 @@ def test_sort_by_key_length(tmp_path):
 
     text = "This is a summary about task T6.2 Using LLM concepts."
 
+    # default behaviour is to follow order of insertion, so the concept is linked first
+    # this gives two different links
     assert (
         linker.run(text)
-        == "This is a summary about task T6.2 Using [[Large Language Model|LLM]] concepts."
+        == "This is a summary about task [[T6.2 Using LLM concepts|T6.2]] Using [[Large Language Model|LLM]] concepts."
+    )
+
+    # setting sort_by_key_length to True will sort the rules by the length of the key
+    # , so the longer key is linked first
+    assert (
+        linker.run(text, sort_by_key_length=True)
+        == "This is a summary about task [[T6.2 Using LLM concepts]]."
     )

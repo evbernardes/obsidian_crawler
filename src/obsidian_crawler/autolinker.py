@@ -2,6 +2,7 @@ import hashlib
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
+from tabnanny import verbose
 from warnings import warn
 
 from .link import ObsidianLink
@@ -52,7 +53,10 @@ class ObsidianAutoLinker:
         link: ObsidianLink,
         whole_words: bool = True,
         extra_word_chars: str = "",
+        verbose: bool = False,
     ) -> None:
+        if verbose:
+            print(f"Adding auto-link rule: '{key}' -> '{link.to_markdown()}'")
 
         if key in self._link_rules:
             warn(
@@ -92,7 +96,11 @@ class ObsidianAutoLinker:
         if title:
             for note in notes:
                 self._add_link(
-                    note.title, ObsidianLink(note.title), whole_words, extra_word_chars
+                    note.title,
+                    ObsidianLink(note.title),
+                    whole_words,
+                    extra_word_chars,
+                    verbose,
                 )
 
                 if lowercase_title:
@@ -102,6 +110,7 @@ class ObsidianAutoLinker:
                         ObsidianLink(note.title, alias=title_lower),
                         whole_words,
                         extra_word_chars,
+                        verbose,
                     )
 
         if aliases:
@@ -112,11 +121,20 @@ class ObsidianAutoLinker:
                     continue
 
                 for alias in aliases:
+                    if alias == note.title:
+                        if verbose:
+                            warn(
+                                f"Note '{note.title}' has an alias that is the same as its title. "
+                                "This alias will be ignored."
+                            )
+                        continue
+
                     self._add_link(
                         alias,
                         ObsidianLink(note.title, alias),
                         whole_words,
                         extra_word_chars,
+                        verbose,
                     )
 
     def run(self, text: str | ObsidianNote, sort_by_key_length: bool = False) -> str:
@@ -148,9 +166,9 @@ class ObsidianAutoLinker:
             link_rules.sort(key=lambda x: len(x[0]), reverse=True)
 
         for source, link_rule in link_rules:
-            # markdown = link.to_markdown()
-            token = _get_token(link_rule.link.to_markdown())
-            protected[token] = link_rule.link.to_markdown()
+            markdown = link_rule.link.to_markdown()
+            token = _get_token(markdown)
+            protected[token] = markdown
             text = link_rule.apply_rule(text, source, token)
 
         for token, markdown in protected.items():
