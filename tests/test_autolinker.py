@@ -143,3 +143,29 @@ def test_single_note_extra_delimiter(tmp_path):
     # This is not what I want
     text = "This is a test for T1.2 and T1.2.4"
     assert linker.run(text) == "This is a test for [[T1.2 test Task|T1.2]] and T1.2.4"
+
+
+def test_word_chars_none(tmp_path):
+    vault = ObsidianVault(tmp_path)
+
+    ObsidianNote(".", fm={"tags": ["concept"], "aliases": ["LLM"]}).write(
+        vault.vault_path / "Large Language Model.md"
+    )
+
+    linker = ObsidianAutoLinker()
+    linker.add_notes(vault.query().with_tag("concept"))
+
+    text = "I want to use multiple Large Language Models (LLM) in my word."
+    assert (
+        linker.run(text)
+        == "I want to use multiple Large Language Models ([[Large Language Model|LLM]]) in my word."
+    )
+
+    linker = ObsidianAutoLinker()
+    linker.add_notes(vault.query().with_tag("concept"), whole_words=False)
+
+    text = "I want to use multiple Large Language Models (LLM) in my word."
+    assert (
+        linker.run(text)
+        == "I want to use multiple [[Large Language Model]]s ([[Large Language Model|LLM]]) in my word."
+    )

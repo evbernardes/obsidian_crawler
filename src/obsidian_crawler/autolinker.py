@@ -8,16 +8,22 @@ from .note import ObsidianNote
 from .query import ObsidianQuery
 
 
-def _replace_word(text, old, new, ignore_case=False, extra_word_chars=""):
+def _replace_word(text, old, new, ignore_case=False, word_chars=""):
     """Replace whole word occurrences of 'old' with 'new' in 'text',
     respecting full words and additional word characters.
 
-    extra_word_chars: characters that should not appear immediately
+    word_chars: characters that should not appear immediately
     before or after the match.
+
+    if word_chars is None, then words are replaced regardless of what characters are around them.
     """
+
+    if word_chars is None:
+        return text.replace(old, new)
+
     flags = re.IGNORECASE if ignore_case else 0
 
-    extra = re.escape(extra_word_chars)
+    extra = re.escape(word_chars)
     pattern = rf"(?<![\w{extra}]){re.escape(old)}(?![\w{extra}])"
 
     return re.sub(pattern, new, text, flags=flags)
@@ -26,13 +32,11 @@ def _replace_word(text, old, new, ignore_case=False, extra_word_chars=""):
 class ObsidianAutoLinker:
     def __init__(self):
         self._links: dict[str, ObsidianLink] = {}
-        self._extra_word_chars: dict[str, str] = {}
+        self._word_chars: dict[str, str] = {}
 
-    def _add_link(
-        self, key: str, link: ObsidianLink, extra_word_chars: str = ""
-    ) -> None:
+    def _add_link(self, key: str, link: ObsidianLink, word_chars: str = "") -> None:
         self._links[key] = link
-        self._extra_word_chars[key] = extra_word_chars
+        self._word_chars[key] = word_chars
 
     def add_notes(
         self,
@@ -41,22 +45,32 @@ class ObsidianAutoLinker:
         aliases: bool = True,
         lowercase_title: bool = False,
         verbose: bool = False,
+        whole_words: bool = True,
         extra_word_chars: str = "",
     ) -> None:
 
         if isinstance(notes, ObsidianQuery):
             notes = notes.all()
 
+        _word_chars = extra_word_chars
+        if not whole_words:
+            if extra_word_chars != "":
+                warn(
+                    "extra_word_chars is ignored when whole_words is False. "
+                    "Set whole_words to True to use extra_word_chars."
+                )
+            _word_chars = None
+
         if title:
             for note in notes:
-                self._add_link(note.title, ObsidianLink(note.title), extra_word_chars)
+                self._add_link(note.title, ObsidianLink(note.title), _word_chars)
 
                 if lowercase_title:
                     title_lower = note.title.lower()
                     self._add_link(
                         title_lower,
                         ObsidianLink(note.title, alias=title_lower),
-                        extra_word_chars,
+                        _word_chars,
                     )
 
         if aliases:
@@ -67,9 +81,7 @@ class ObsidianAutoLinker:
                     continue
 
                 for alias in aliases:
-                    self._add_link(
-                        alias, ObsidianLink(note.title, alias), extra_word_chars
-                    )
+                    self._add_link(alias, ObsidianLink(note.title, alias), _word_chars)
 
     def run(self, text: str | ObsidianNote) -> str:
         """
@@ -99,7 +111,7 @@ class ObsidianAutoLinker:
                 text,
                 source,
                 token,
-                extra_word_chars=self._extra_word_chars[source],
+                word_chars=self._word_chars[source],
             )
 
         for token, markdown in protected.items():
