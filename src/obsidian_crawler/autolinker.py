@@ -2,7 +2,6 @@ import hashlib
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
-from tabnanny import verbose
 from warnings import warn
 
 from .link import ObsidianLink
