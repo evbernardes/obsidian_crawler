@@ -8,16 +8,16 @@ from .note import ObsidianNote
 from .query import ObsidianQuery
 
 
-def _replace_word(text, old, new, ignore_case=False, extra_boundary_chars=""):
+def _replace_word(text, old, new, ignore_case=False, extra_word_chars=""):
     """Replace whole word occurrences of 'old' with 'new' in 'text',
-    respecting full words and additional boundary characters.
+    respecting full words and additional word characters.
 
-    extra_boundary_chars: characters that should not appear immediately
+    extra_word_chars: characters that should not appear immediately
     before or after the match.
     """
     flags = re.IGNORECASE if ignore_case else 0
 
-    extra = re.escape(extra_boundary_chars)
+    extra = re.escape(extra_word_chars)
     pattern = rf"(?<![\w{extra}]){re.escape(old)}(?![\w{extra}])"
 
     return re.sub(pattern, new, text, flags=flags)
@@ -26,13 +26,13 @@ def _replace_word(text, old, new, ignore_case=False, extra_boundary_chars=""):
 class ObsidianAutoLinker:
     def __init__(self):
         self._links: dict[str, ObsidianLink] = {}
-        self._extra_boundary_chars: dict[str, str] = {}
+        self._extra_word_chars: dict[str, str] = {}
 
     def _add_link(
-        self, key: str, link: ObsidianLink, extra_boundary_chars: str = ""
+        self, key: str, link: ObsidianLink, extra_word_chars: str = ""
     ) -> None:
         self._links[key] = link
-        self._extra_boundary_chars[key] = extra_boundary_chars
+        self._extra_word_chars[key] = extra_word_chars
 
     def add_notes(
         self,
@@ -41,7 +41,7 @@ class ObsidianAutoLinker:
         aliases: bool = True,
         lowercase_title: bool = False,
         verbose: bool = False,
-        extra_boundary_chars: str = "",
+        extra_word_chars: str = "",
     ) -> None:
 
         if isinstance(notes, ObsidianQuery):
@@ -49,16 +49,14 @@ class ObsidianAutoLinker:
 
         if title:
             for note in notes:
-                self._add_link(
-                    note.title, ObsidianLink(note.title), extra_boundary_chars
-                )
+                self._add_link(note.title, ObsidianLink(note.title), extra_word_chars)
 
                 if lowercase_title:
                     title_lower = note.title.lower()
                     self._add_link(
                         title_lower,
                         ObsidianLink(note.title, alias=title_lower),
-                        extra_boundary_chars,
+                        extra_word_chars,
                     )
 
         if aliases:
@@ -70,7 +68,7 @@ class ObsidianAutoLinker:
 
                 for alias in aliases:
                     self._add_link(
-                        alias, ObsidianLink(note.title, alias), extra_boundary_chars
+                        alias, ObsidianLink(note.title, alias), extra_word_chars
                     )
 
     def run(self, text: str | ObsidianNote) -> str:
@@ -101,7 +99,7 @@ class ObsidianAutoLinker:
                 text,
                 source,
                 token,
-                extra_boundary_chars=self._extra_boundary_chars[source],
+                extra_word_chars=self._extra_word_chars[source],
             )
 
         for token, markdown in protected.items():

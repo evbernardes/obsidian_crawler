@@ -138,7 +138,7 @@ def test_single_note_extra_delimiter(tmp_path):
     )
 
     linker = ObsidianAutoLinker()
-    linker.add_notes(vault.query().with_tag("task"), extra_boundary_chars=".")
+    linker.add_notes(vault.query().with_tag("task"), extra_word_chars=".")
 
     # This is not what I want
     text = "This is a test for T1.2 and T1.2.4"
