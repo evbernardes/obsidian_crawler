@@ -1,6 +1,7 @@
 import hashlib
 import re
 from collections.abc import Iterable
+from dataclasses import dataclass
 from warnings import warn
 
 from .link import ObsidianLink
@@ -8,7 +9,15 @@ from .note import ObsidianNote
 from .query import ObsidianQuery
 
 
-def _replace_word(text, old, new, ignore_case=False, word_chars=""):
+@dataclass(slots=True)
+class LinkRule:
+    link: ObsidianLink
+    whole_words: bool = True
+    extra_word_chars: str = ""
+    ignore_case: bool = False
+
+
+def _replace_word(text, old, new, link_rule: LinkRule):
     """Replace whole word occurrences of 'old' with 'new' in 'text',
     respecting full words and additional word characters.
 
@@ -18,12 +27,12 @@ def _replace_word(text, old, new, ignore_case=False, word_chars=""):
     if word_chars is None, then words are replaced regardless of what characters are around them.
     """
 
-    if word_chars is None:
+    if not link_rule.whole_words:
         return text.replace(old, new)
 
-    flags = re.IGNORECASE if ignore_case else 0
+    flags = re.IGNORECASE if link_rule.ignore_case else 0
 
-    extra = re.escape(word_chars)
+    extra = re.escape(link_rule.extra_word_chars)
     pattern = rf"(?<![\w{extra}]){re.escape(old)}(?![\w{extra}])"
 
     return re.sub(pattern, new, text, flags=flags)
@@ -31,19 +40,23 @@ def _replace_word(text, old, new, ignore_case=False, word_chars=""):
 
 class ObsidianAutoLinker:
     def __init__(self):
-        self._links: dict[str, ObsidianLink] = {}
-        self._word_chars: dict[str, str] = {}
+        self._link_rules: dict[str, LinkRule] = {}
 
-    def _add_link(self, key: str, link: ObsidianLink, word_chars: str = "") -> None:
+    def _add_link(
+        self,
+        key: str,
+        link: ObsidianLink,
+        whole_words: bool = True,
+        extra_word_chars: str = "",
+    ) -> None:
 
-        if key in self._links:
+        if key in self._link_rules:
             warn(
-                f"'{key}' already links to '{self._links[key].target}', "
+                f"'{key}' already links to '{self._link_rules[key].link.target}', "
                 f"overwriting with '{link.target}'."
             )
 
-        self._links[key] = link
-        self._word_chars[key] = word_chars
+        self._link_rules[key] = LinkRule(link, whole_words, extra_word_chars)
 
     def add_notes(
         self,
@@ -59,25 +72,25 @@ class ObsidianAutoLinker:
         if isinstance(notes, ObsidianQuery):
             notes = notes.all()
 
-        _word_chars = extra_word_chars
-        if not whole_words:
-            if extra_word_chars != "":
-                warn(
-                    "extra_word_chars is ignored when whole_words is False. "
-                    "Set whole_words to True to use extra_word_chars."
-                )
-            _word_chars = None
+        if not whole_words and extra_word_chars != "":
+            warn(
+                "extra_word_chars is ignored when whole_words is False. "
+                "Set whole_words to True to use extra_word_chars."
+            )
 
         if title:
             for note in notes:
-                self._add_link(note.title, ObsidianLink(note.title), _word_chars)
+                self._add_link(
+                    note.title, ObsidianLink(note.title), whole_words, extra_word_chars
+                )
 
                 if lowercase_title:
                     title_lower = note.title.lower()
                     self._add_link(
                         title_lower,
                         ObsidianLink(note.title, alias=title_lower),
-                        _word_chars,
+                        whole_words,
+                        extra_word_chars,
                     )
 
         if aliases:
@@ -88,7 +101,12 @@ class ObsidianAutoLinker:
                     continue
 
                 for alias in aliases:
-                    self._add_link(alias, ObsidianLink(note.title, alias), _word_chars)
+                    self._add_link(
+                        alias,
+                        ObsidianLink(note.title, alias),
+                        whole_words,
+                        extra_word_chars,
+                    )
 
     def run(self, text: str | ObsidianNote) -> str:
         """
@@ -110,15 +128,15 @@ class ObsidianAutoLinker:
             text = text.replace(markdown, token)
 
         # create a token for each link to be replaced, and replace it in the text
-        for source, link in self._links.items():
+        for source, link_rule in self._link_rules.items():
             # markdown = link.to_markdown()
             token = hashlib.sha256(source.encode("utf-8")).hexdigest()
-            protected[token] = link.to_markdown()
+            protected[token] = link_rule.link.to_markdown()
             text = _replace_word(
                 text,
                 source,
                 token,
-                word_chars=self._word_chars[source],
+                link_rule=link_rule,
             )
 
         for token, markdown in protected.items():
