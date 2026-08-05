@@ -169,3 +169,28 @@ def test_word_chars_none(tmp_path):
         linker.run(text)
         == "I want to use multiple [[Large Language Model]]s ([[Large Language Model|LLM]]) in my word."
     )
+
+
+def test_sort_by_key_length(tmp_path):
+    vault = ObsidianVault(tmp_path)
+
+    ObsidianNote(".", fm={"tags": ["concept"], "aliases": ["LLM"]}).write(
+        vault.vault_path / "Large Language Model.md"
+    )
+
+    ObsidianNote(".", fm={"tags": ["task"], "aliases": ["T6.2"]}).write(
+        vault.vault_path / "T6.2 Using LLM concepts.md"
+    )
+
+    linker = ObsidianAutoLinker()
+
+    # If I first add the concepts and then the tasks...
+    linker.add_notes(vault.query().with_tag("concept"))
+    linker.add_notes(vault.query().with_tag("task"))
+
+    text = "This is a summary about task T6.2 Using LLM concepts."
+
+    assert (
+        linker.run(text)
+        == "This is a summary about task T6.2 Using [[Large Language Model|LLM]] concepts."
+    )

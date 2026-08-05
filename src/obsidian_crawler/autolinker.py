@@ -119,7 +119,7 @@ class ObsidianAutoLinker:
                         extra_word_chars,
                     )
 
-    def run(self, text: str | ObsidianNote) -> str:
+    def run(self, text: str | ObsidianNote, sort_by_key_length: bool = False) -> str:
         """
         Replace known text by Obsidian links.
 
@@ -143,7 +143,11 @@ class ObsidianAutoLinker:
             text = text.replace(markdown, token)
 
         # create a token for each link to be replaced, and replace it in the text
-        for source, link_rule in self._link_rules.items():
+        link_rules = list(self._link_rules.items())
+        if sort_by_key_length:
+            link_rules.sort(key=lambda x: len(x[0]), reverse=True)
+
+        for source, link_rule in link_rules:
             # markdown = link.to_markdown()
             token = _get_token(link_rule.link.to_markdown())
             protected[token] = link_rule.link.to_markdown()
