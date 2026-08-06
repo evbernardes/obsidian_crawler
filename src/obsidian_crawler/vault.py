@@ -129,20 +129,20 @@ class ObsidianVault:
 
         remaining = set(self._cache)
 
-        times_new = {
+        mtimes_new = {
             path.resolve(): path.stat().st_mtime_ns
             for path in self.vault_path.rglob("*.md")
         }
 
         changes = {}
-        for path, time in times_new.items():
+        for path, mtime_new in mtimes_new.items():
             if path not in self._cache:
                 changes[path] = VaultChange.NEW
                 continue
 
             remaining.remove(path)
 
-            if self._cache[path].mtime != time:
+            if self._cache[path].mtime != mtime_new:
                 changes[path] = VaultChange.MODIFIED
 
         for path in remaining:
