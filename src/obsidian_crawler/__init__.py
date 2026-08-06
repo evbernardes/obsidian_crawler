@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from .autolinker import ObsidianAutoLinker
 from .block import MarkdownBlock
 from .link import ObsidianLink

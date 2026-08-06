@@ -1,8 +1,9 @@
+#!/usr/bin/env python3
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable
-from typing import Any, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator
+from typing import Any
 
 from .note import ObsidianNote
 
