@@ -10,7 +10,7 @@ from .note import ObsidianNote
 from .query import ObsidianQuery
 
 
-def _get_token(text: str) -> str:
+def _create_token(text: str) -> str:
     """Return a unique token for the given text."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -156,7 +156,7 @@ class ObsidianAutoLinker:
         # protect existing links beforehand
         for link in ObsidianLink.parse(text):
             markdown = link.to_markdown()
-            token = _get_token(markdown)
+            token = _create_token(markdown)
             protected[token] = markdown
             text = text.replace(markdown, token)
 
@@ -167,7 +167,7 @@ class ObsidianAutoLinker:
 
         for source, link_rule in link_rules:
             markdown = link_rule.link.to_markdown()
-            token = _get_token(markdown)
+            token = _create_token(markdown)
             protected[token] = markdown
             text = link_rule.apply_rule(text, source, token)
 
