@@ -61,9 +61,12 @@ class ObsidianVault:
 
         old_entry = self._cache.get(path)
 
-        if old_entry and self._title_cache is not None:
-            if old_entry.note.title != entry.note.title:
-                self._title_cache.pop(old_entry.note.title, None)
+        if (
+            old_entry
+            and self._title_cache is not None
+            and old_entry.note.title != entry.note.title
+        ):
+            self._title_cache.pop(old_entry.note.title, None)
 
         self._cache[path] = entry
 
