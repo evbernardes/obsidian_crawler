@@ -44,28 +44,38 @@ class AutoLinkRule:
 
 
 class ObsidianAutoLinker:
-    def __init__(self):
+    def __init__(self, auto_sort_by_key_length: bool = False):
         self._link_rules: dict[str, AutoLinkRule] = {}
+        self._auto_sort_by_key_length: bool = auto_sort_by_key_length
+        self._sorted: bool = False
 
-    def _add_link(
+    def add(
         self,
-        key: str,
+        trigger: str,
         link: ObsidianLink,
         whole_words: bool = True,
         extra_word_chars: str = "",
         verbose: bool = False,
+        ignore_case: bool = False,
     ) -> None:
+        """
+        Register a single auto-link rule.
+        """
         if verbose:
-            print(f"Adding auto-link rule: '{key}' -> '{link.to_markdown()}'")
+            print(f"Adding auto-link rule: '{trigger}' -> '{link.to_markdown()}'")
 
-        if key in self._link_rules:
+        if trigger in self._link_rules:
             warn(
-                f"Duplicate auto-link trigger '{key}'. "
-                f"'{self._link_rules[key].link.to_markdown()}' "
+                f"Duplicate auto-link trigger '{trigger}'. "
+                f"'{self._link_rules[trigger].link.to_markdown()}' "
                 f"will be replaced by "
                 f"'{link.to_markdown()}'."
             )
-        self._link_rules[key] = AutoLinkRule(link, whole_words, extra_word_chars)
+
+        self._link_rules[trigger] = AutoLinkRule(
+            link, whole_words, extra_word_chars, ignore_case
+        )
+        self._sorted = False
 
     def add_notes(
         self,
@@ -95,7 +105,7 @@ class ObsidianAutoLinker:
 
         if title:
             for note in notes:
-                self._add_link(
+                self.add(
                     note.title,
                     ObsidianLink(note.title),
                     whole_words,
@@ -105,7 +115,7 @@ class ObsidianAutoLinker:
 
                 if lowercase_title:
                     title_lower = note.title.lower()
-                    self._add_link(
+                    self.add(
                         title_lower,
                         ObsidianLink(note.title, alias=title_lower),
                         whole_words,
@@ -129,7 +139,7 @@ class ObsidianAutoLinker:
                             )
                         continue
 
-                    self._add_link(
+                    self.add(
                         alias,
                         ObsidianLink(note.title, alias),
                         whole_words,
@@ -137,16 +147,31 @@ class ObsidianAutoLinker:
                         verbose,
                     )
 
-    def run(self, text: str | ObsidianNote, sort_by_key_length: bool = False) -> str:
+    def sort_by_key_length(self) -> None:
+        """
+        Set whether to sort the auto-link rules by key length.
+
+        When enabled, longer keys will be matched first.
+        This is useful when multiple rules could match the same text.
+        """
+        if not self._sorted:
+            link_rules_list = list(self._link_rules.items())
+            link_rules_list.sort(key=lambda x: len(x[0]), reverse=True)
+            self._link_rules = dict(link_rules_list)
+            self._sorted = True
+
+    def run(self, text: str | ObsidianNote) -> str:
         """
         Replace known text by Obsidian links.
 
         Existing links are left untouched.
 
-        Rules are applied in insertion order.
+        If not sorted, rules are applied in insertion order.
         This allows callers to control priority when multiple rules
         could match the same text.
         """
+
+        # sort_by_key_length = self._auto_sort_by_key_length
 
         if isinstance(text, ObsidianNote):
             text = text.body
@@ -161,11 +186,10 @@ class ObsidianAutoLinker:
             text = text.replace(markdown, token)
 
         # create a token for each link to be replaced, and replace it in the text
-        link_rules = list(self._link_rules.items())
-        if sort_by_key_length:
-            link_rules.sort(key=lambda x: len(x[0]), reverse=True)
+        if self._auto_sort_by_key_length:
+            self.sort_by_key_length()
 
-        for source, link_rule in link_rules:
+        for source, link_rule in self._link_rules.items():
             markdown = link_rule.link.to_markdown()
             token = _create_token(markdown)
             protected[token] = markdown

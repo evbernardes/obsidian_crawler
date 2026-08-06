@@ -199,7 +199,31 @@ def test_sort_by_key_length(tmp_path):
 
     # setting sort_by_key_length to True will sort the rules by the length of the key
     # , so the longer key is linked first
+    linker.sort_by_key_length()
     assert (
-        linker.run(text, sort_by_key_length=True)
-        == "This is a summary about task [[T6.2 Using LLM concepts]]."
+        linker.run(text) == "This is a summary about task [[T6.2 Using LLM concepts]]."
+    )
+
+
+def test_auto_sort_by_key_length(tmp_path):
+    vault = ObsidianVault(tmp_path)
+
+    ObsidianNote(".", fm={"tags": ["concept"], "aliases": ["LLM"]}).write(
+        vault.vault_path / "Large Language Model.md"
+    )
+
+    ObsidianNote(".", fm={"tags": ["task"], "aliases": ["T6.2"]}).write(
+        vault.vault_path / "T6.2 Using LLM concepts.md"
+    )
+
+    linker = ObsidianAutoLinker(auto_sort_by_key_length=True)
+
+    # If I first add the concepts and then the tasks...
+    linker.add_notes(vault.query().with_tag("concept"))
+    linker.add_notes(vault.query().with_tag("task"))
+
+    text = "This is a summary about task T6.2 Using LLM concepts."
+
+    assert (
+        linker.run(text) == "This is a summary about task [[T6.2 Using LLM concepts]]."
     )
