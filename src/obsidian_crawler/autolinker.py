@@ -7,6 +7,7 @@ from warnings import warn
 
 from .link import ObsidianLink
 from .note import ObsidianNote
+from .parsers import fuse_blocks
 from .query import ObsidianQuery
 
 
@@ -160,7 +161,7 @@ class ObsidianAutoLinker:
             self._link_rules = dict(link_rules_list)
             self._sorted = True
 
-    def run(self, text: str | ObsidianNote) -> str:
+    def run(self, text: str | ObsidianNote) -> str | ObsidianNote:
         """
         Replace known text by Obsidian links.
 
@@ -174,7 +175,14 @@ class ObsidianAutoLinker:
         # sort_by_key_length = self._auto_sort_by_key_length
 
         if isinstance(text, ObsidianNote):
-            text = text.body
+            note = text.copy()
+            blocks = text.blocks
+            for i, block in enumerate(blocks):
+                if block.is_code:
+                    continue
+                block.content = self.run(block.content)
+            note.body = fuse_blocks(blocks)
+            return note
 
         protected: dict[str, str] = {}
 

@@ -227,3 +227,50 @@ def test_auto_sort_by_key_length(tmp_path):
     assert (
         linker.run(text) == "This is a summary about task [[T6.2 Using LLM concepts]]."
     )
+
+
+def test_linker_note_with_block(tmp_path):
+    vault = ObsidianVault(tmp_path)
+
+    ObsidianNote(".", fm={"tags": ["concept"], "aliases": ["LLM"]}).write(
+        vault.vault_path / "Large Language Model.md",
+    )
+
+    linker = ObsidianAutoLinker()
+    linker.add_notes(vault.query().with_tag("concept"))
+
+    note = ObsidianNote(
+        "./test.md",
+        body="""This is a note about Large Language Models.
+```python
+def LLM():
+    pass
+```
+This is more text about LLM.
+""",
+    )
+
+    # Undesired behaviour: the LLM in the code block is linked, which is not what we want
+    assert (
+        linker.run(note.body)
+        == """This is a note about Large Language Models.
+```python
+def [[Large Language Model|LLM]]():
+    pass
+```
+This is more text about [[Large Language Model|LLM]].
+"""
+    )
+
+    # When input is a note, however, it gives back an autolinked copy of the note
+    # only text outside of blocks is autolinked
+    assert (
+        linker.run(note).body
+        == """This is a note about Large Language Models.
+```python
+def LLM():
+    pass
+```
+This is more text about [[Large Language Model|LLM]].
+"""
+    )
