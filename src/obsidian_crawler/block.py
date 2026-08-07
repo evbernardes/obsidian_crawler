@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=False, slots=True)
 class MarkdownBlock:
     """
     Represents a block of Markdown.
