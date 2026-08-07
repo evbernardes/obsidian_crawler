@@ -274,3 +274,23 @@ def LLM():
 This is more text about [[Large Language Model|LLM]].
 """
     )
+
+
+def test_url_link(tmp_path):
+    vault = ObsidianVault(tmp_path)
+
+    ObsidianNote(".", fm={"tags": ["concept"], "aliases": ["LLM"]}).write(
+        vault.vault_path / "Large Language Model.md"
+    )
+
+    linker = ObsidianAutoLinker()
+
+    # If I first add the concepts and then the tasks...
+    linker.add_notes(vault.query().with_tag("concept"))
+
+    text = "This is a summary about task LLM concepts, you can read more about it on [My blog about LLM right now](my.llm.blog)."
+
+    assert (
+        linker.run(text)
+        == "This is a summary about task [[Large Language Model|LLM]] concepts, you can read more about it on [My blog about LLM right now](my.llm.blog)."
+    )

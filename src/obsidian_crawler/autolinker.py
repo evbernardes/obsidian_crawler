@@ -11,6 +11,12 @@ from .parsers import fuse_blocks
 from .query import ObsidianQuery
 
 
+def _find_markdown_url_links(markdown):
+    pattern = r"(\[([^\]]+)\]\(([^)\s]+)\))"
+
+    return [match.group(1) for match in re.finditer(pattern, markdown)]
+
+
 def _create_token(text: str) -> str:
     """Return a unique token for the given text."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -192,6 +198,11 @@ class ObsidianAutoLinker:
             token = _create_token(markdown)
             protected[token] = markdown
             text = text.replace(markdown, token)
+
+        for urllink in _find_markdown_url_links(text):
+            token = _create_token(urllink)
+            protected[token] = urllink
+            text = text.replace(urllink, token)
 
         # create a token for each link to be replaced, and replace it in the text
         if self._auto_sort_by_key_length:
