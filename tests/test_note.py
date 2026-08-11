@@ -40,6 +40,29 @@ def test_modified_flag():
     assert note.modified
 
 
+def test_change_title():
+    note = ObsidianNote(
+        path="test.md",
+        fm={},
+        body="Hello",
+    )
+
+    assert note.title == "test"
+
+    note.title = "Testando"
+
+    assert note.title == "Testando"
+
+    with pytest.raises(ValueError):
+        note.title = "Testando.Asd"
+
+    with pytest.raises(ValueError):
+        note.title = "Testando/Asd"
+
+    with pytest.raises(ValueError):
+        note.title = "Testando:Asd"
+
+
 def test_reset_restores_original():
     note = ObsidianNote(
         path="test.md",

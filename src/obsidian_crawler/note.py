@@ -135,7 +135,16 @@ class ObsidianNote:
 
     @title.setter
     def title(self, value: str) -> None:
-        self.path.with_stem(value)
+
+        if any(char in value for char in [".", "/", ":"]):
+            raise ValueError(f"Invalid name '{value}'")
+
+        new_path = self.path.with_stem(value)
+
+        if new_path.parent != self.path.parent:
+            raise ValueError(f"Invalid name '{value}'")
+
+        self.path = self.path.with_stem(value)
 
     @property
     def body_without_dataviewjs(self) -> str:
