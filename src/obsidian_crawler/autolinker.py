@@ -56,7 +56,7 @@ class ObsidianAutoLinker:
         self._auto_sort_by_key_length: bool = auto_sort_by_key_length
         self._sorted: bool = False
 
-    def add(
+    def add_link(
         self,
         trigger: str,
         link: ObsidianLink,
@@ -112,7 +112,7 @@ class ObsidianAutoLinker:
 
         if title:
             for note in notes:
-                self.add(
+                self.add_link(
                     note.title,
                     ObsidianLink(note.title),
                     whole_words,
@@ -122,7 +122,7 @@ class ObsidianAutoLinker:
 
                 if lowercase_title:
                     title_lower = note.title.lower()
-                    self.add(
+                    self.add_link(
                         title_lower,
                         ObsidianLink(note.title, alias=title_lower),
                         whole_words,
@@ -146,7 +146,7 @@ class ObsidianAutoLinker:
                             )
                         continue
 
-                    self.add(
+                    self.add_link(
                         alias,
                         ObsidianLink(note.title, alias),
                         whole_words,

@@ -15,7 +15,7 @@ note_concept_llm = ObsidianNote(
 )
 
 
-def test_single_note(tmp_path):
+def test_single_note_from_vault(tmp_path):
     vault = ObsidianVault(tmp_path)
 
     ObsidianNote(".", fm={"tags": ["task"], "aliases": ["T1.2"]}).write(
@@ -23,6 +23,10 @@ def test_single_note(tmp_path):
     )
 
     linker = ObsidianAutoLinker()
+
+    text = "This is a test for T1.2 and T6.2 and LLM."
+    assert linker.run(text) == text
+
     linker.add_notes(vault.query().with_tag("task"))
 
     text = "This is a test for T1.2 and T6.2 and LLM."
@@ -38,7 +42,7 @@ def test_single_note(tmp_path):
     )
 
 
-def test_two_notes(tmp_path):
+def test_two_notes_from_vault(tmp_path):
     vault = ObsidianVault(tmp_path)
 
     ObsidianNote(".", fm={"tags": ["task"], "aliases": ["T1.2"]}).write(
@@ -229,15 +233,16 @@ def test_auto_sort_by_key_length(tmp_path):
     )
 
 
-def test_linker_note_with_block(tmp_path):
-    vault = ObsidianVault(tmp_path)
+def test_linker_note_with_block():
 
-    ObsidianNote(".", fm={"tags": ["concept"], "aliases": ["LLM"]}).write(
-        vault.vault_path / "Large Language Model.md",
+    note = ObsidianNote(
+        "./Large Language Model.md", fm={"tags": ["concept"], "aliases": ["LLM"]}
     )
 
     linker = ObsidianAutoLinker()
-    linker.add_notes(vault.query().with_tag("concept"))
+
+    for trigger, link in note.to_links().items():
+        linker.add_link(trigger, link)
 
     note = ObsidianNote(
         "./test.md",
@@ -276,17 +281,17 @@ This is more text about [[Large Language Model|LLM]].
     )
 
 
-def test_url_link(tmp_path):
-    vault = ObsidianVault(tmp_path)
+def test_url_link():
 
-    ObsidianNote(".", fm={"tags": ["concept"], "aliases": ["LLM"]}).write(
-        vault.vault_path / "Large Language Model.md"
+    note = ObsidianNote(
+        "./Large Language Model.md",
+        fm={"tags": ["concept"], "aliases": ["LLM"]},
     )
 
     linker = ObsidianAutoLinker()
 
-    # If I first add the concepts and then the tasks...
-    linker.add_notes(vault.query().with_tag("concept"))
+    for trigger, link in note.to_links().items():
+        linker.add_link(trigger, link)
 
     text = "This is a summary about task LLM concepts, you can read more about it on [My blog about LLM right now](my.llm.blog)."
 
