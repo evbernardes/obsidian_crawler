@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import re
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -136,3 +138,37 @@ def fuse_blocks(blocks) -> str:
             full_text += block.to_markdown()
 
     return full_text
+
+
+def parse_url_links(markdown):
+    pattern = r"(\[([^\]]+)\]\(([^)\s]+)\))"
+
+    return [match.group(1) for match in re.finditer(pattern, markdown)]
+
+
+_MATH_RE = re.compile(
+    r"\$\$(?:.|\n)*?\$\$"
+    r"|\$(?!\$)(?:\\.|[^$\n\\])+\$"
+)
+
+
+@dataclass(frozen=True, slots=True)
+class MathRegion:
+    content: str
+    start: int
+    end: int
+
+    @property
+    def inline(self) -> bool:
+        return self.content.startswith("$") and not self.content.startswith("$$")
+
+
+def parse_math(text: str) -> list[MathRegion]:
+    return [
+        MathRegion(
+            content=match.group(0),
+            start=match.start(),
+            end=match.end(),
+        )
+        for match in _MATH_RE.finditer(text)
+    ]

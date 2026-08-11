@@ -299,3 +299,47 @@ def test_url_link():
         linker.run(text)
         == "This is a summary about task [[Large Language Model|LLM]] concepts, you can read more about it on [My blog about LLM right now](my.llm.blog)."
     )
+
+
+def test_equation():
+
+    note = ObsidianNote(
+        "./Value function.md", fm={"tags": ["concept"], "aliases": ["value"]}
+    )
+
+    linker = ObsidianAutoLinker()
+
+    for trigger, link in note.to_links().items():
+        linker.add_link(trigger, link)
+
+    # Wrong inline math region, gets linked
+    assert (
+        linker.run(
+            "Define a Value function  f_{\\text{value}}: \\mathbb{N} \\to \\mathbb{R}$."
+        )
+        == "Define a [[Value function]]  f_{\\text{[[Value function|value]]}}: \\mathbb{N} \\to \\mathbb{R}$."
+    )
+
+    # Correct inline math region is protected
+    assert (
+        linker.run(
+            "Define a Value function $f_{\\text{value}}: \\mathbb{N} \\to \\mathbb{R}$."
+        )
+        == "Define a [[Value function]] $f_{\\text{value}}: \\mathbb{N} \\to \\mathbb{R}$."
+    )
+
+    # Wrong full math region, gets linked
+    assert (
+        linker.run(
+            "Define a Value function  f_{\\text{value}}: \\mathbb{N} \\to \\mathbb{R}$$."
+        )
+        == "Define a [[Value function]]  f_{\\text{[[Value function|value]]}}: \\mathbb{N} \\to \\mathbb{R}$$."
+    )
+
+    # Correct multiple math regions are protected
+    assert (
+        linker.run(
+            "Define a Value function $$f_{\\text{value}}: \\mathbb{N} \\to \\mathbb{R}$$. Let's see some properties of $ f_{\\text{value}}$:"
+        )
+        == "Define a [[Value function]] $$f_{\\text{value}}: \\mathbb{N} \\to \\mathbb{R}$$. Let's see some properties of $ f_{\\text{value}}$:"
+    )
