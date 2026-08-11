@@ -138,6 +138,17 @@ def test_as_link():
     assert note.as_link(alias="Testing").to_markdown() == "[[Testing]]"
 
 
+def test_to_links():
+
+    note = ObsidianNote(path="Test.md", fm={"aliases": ["A", "B", "Test"]})
+    links = note.to_links()
+
+    assert len(links) == 3  # 1 for the title, 2 for the aliases that are different
+    assert links["Test"].to_markdown() == "[[Test]]"
+    assert links["A"].to_markdown() == "[[Test|A]]"
+    assert links["B"].to_markdown() == "[[Test|B]]"
+
+
 # ---------------------------------------------------------
 # Properties
 # ---------------------------------------------------------

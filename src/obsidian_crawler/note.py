@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -161,6 +161,21 @@ class ObsidianNote:
         if alias == self.title:
             alias = None
         return ObsidianLink(self.title, alias)
+
+    def to_links(self) -> dict[str, ObsidianLink]:
+        links = {}
+        links[self.title] = ObsidianLink(self.title)
+        if "aliases" in self.fm:
+            aliases = self.fm["aliases"]
+            if not isinstance(aliases, list):
+                raise TypeError(
+                    f"Expected 'aliases' property to be of type list, got '{aliases}'"
+                )
+            for alias in aliases:
+                if alias in links:
+                    continue
+                links[alias] = ObsidianLink(self.title, alias)
+        return links
 
     def linked_notes(
         self,
