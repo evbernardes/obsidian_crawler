@@ -157,6 +157,11 @@ class ObsidianNote:
     def links(self) -> list[ObsidianLink]:
         return self._links
 
+    def as_link(self, alias: None | str = None) -> ObsidianLink:
+        if alias == self.title:
+            alias = None
+        return ObsidianLink(self.title, alias)
+
     def linked_notes(
         self,
         vault: ObsidianVault,

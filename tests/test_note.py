@@ -126,6 +126,19 @@ def test_as_json():
 
 
 # ---------------------------------------------------------
+# Link
+# ---------------------------------------------------------
+def test_as_link():
+    note = ObsidianNote(path="Testing.md")
+
+    assert note.as_link().to_markdown() == "[[Testing]]"
+    assert note.as_link(alias="Test").to_markdown() == "[[Testing|Test]]"
+
+    # Ignores alias if the same as name
+    assert note.as_link(alias="Testing").to_markdown() == "[[Testing]]"
+
+
+# ---------------------------------------------------------
 # Properties
 # ---------------------------------------------------------
 
