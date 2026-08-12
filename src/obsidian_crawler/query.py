@@ -33,7 +33,7 @@ class ObsidianQuery:
     # Internal
     # --------------------------------------------------
 
-    def _clone(self, operation) -> list[ObsidianQuery]:
+    def _clone(self, operation) -> ObsidianQuery:
         return ObsidianQuery(
             self._source,
             self._pipeline + (operation,),
@@ -54,13 +54,13 @@ class ObsidianQuery:
     def where(
         self,
         predicate: Callable[[ObsidianNote], bool],
-    ) -> list[ObsidianQuery]:
+    ) -> ObsidianQuery:
         return self._clone(lambda notes: filter(predicate, notes))
 
-    def with_tag(self, tag: str) -> list[ObsidianQuery]:
+    def with_tag(self, tag: str) -> ObsidianQuery:
         return self.where(lambda n: tag in n.tags)
 
-    def with_tags(self, *tags: str, require_all: bool = True) -> list[ObsidianQuery]:
+    def with_tags(self, *tags: str, require_all: bool = True) -> ObsidianQuery:
         if require_all:
             return self.where(lambda n: all(tag in n.tags for tag in tags))
 
