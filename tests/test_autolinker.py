@@ -130,23 +130,52 @@ def test_single_note_extra_delimiter(tmp_path):
     ObsidianNote(".", fm={"tags": ["task"], "aliases": ["T1.2"]}).write(
         vault.vault_path / "T1.2 test Task.md"
     )
+    text = "This is a test for T1.2 and T1.2.4"
 
     linker = ObsidianAutoLinker()
     linker.add_notes(vault.query().with_tag("task"))
-
-    # This is not what I want
-    text = "This is a test for T1.2 and T1.2.4"
     assert (
         linker.run(text)
         == "This is a test for [[T1.2 test Task|T1.2]] and [[T1.2 test Task|T1.2]].4"
-    )
+    )  # This is not what I want
 
     linker = ObsidianAutoLinker()
     linker.add_notes(vault.query().with_tag("task"), extra_word_chars=".")
-
-    # This is not what I want
-    text = "This is a test for T1.2 and T1.2.4"
     assert linker.run(text) == "This is a test for [[T1.2 test Task|T1.2]] and T1.2.4"
+
+
+def test_single_note_allowed_prefixes(tmp_path):
+    vault = ObsidianVault(tmp_path)
+
+    ObsidianNote(".", fm={"tags": ["task"], "aliases": ["T1.2"]}).write(
+        vault.vault_path / "T1.2 test Task.md"
+    )
+    text = "This is a test for _T1.2"
+
+    linker = ObsidianAutoLinker()
+    linker.add_notes(vault.query().with_tag("task"))
+    assert linker.run(text) == "This is a test for _T1.2"  # This is not what I want
+
+    linker = ObsidianAutoLinker()
+    linker.add_notes(vault.query().with_tag("task"), allowed_prefixes="_")
+    assert linker.run(text) == "This is a test for _[[T1.2 test Task|T1.2]]"
+
+
+def test_single_note_allowed_suffixes(tmp_path):
+    vault = ObsidianVault(tmp_path)
+
+    ObsidianNote(".", fm={"tags": ["concept"], "aliases": ["LLM"]}).write(
+        vault.vault_path / "Large Language Model.md"
+    )
+    text = "We are gonna talk about LLMs"
+
+    linker = ObsidianAutoLinker()
+    linker.add_notes(vault.query().with_tag("concept"))
+    assert linker.run(text) == "We are gonna talk about LLMs"  # This is not what I want
+
+    linker = ObsidianAutoLinker()
+    linker.add_notes(vault.query().with_tag("concept"), allowed_suffixes="s")
+    assert linker.run(text) == "We are gonna talk about [[Large Language Model|LLM]]s"
 
 
 def test_word_chars_none(tmp_path):

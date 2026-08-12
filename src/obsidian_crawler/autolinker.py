@@ -21,6 +21,8 @@ class AutoLinkRule:
     link: ObsidianLink
     whole_words: bool = True
     extra_word_chars: str = ""
+    allowed_prefixes: str = ""
+    allowed_suffixes: str = ""
     ignore_case: bool = False
 
     def apply_rule(self, text: str, old: str, new: str) -> str:
@@ -38,10 +40,37 @@ class AutoLinkRule:
 
         flags = re.IGNORECASE if self.ignore_case else 0
 
-        extra = re.escape(self.extra_word_chars)
-        pattern = rf"(?<![\w{extra}]){re.escape(old)}(?![\w{extra}])"
+        word_chars = set(
+            r"abcdefghijklmnopqrstuvwxyz"
+            r"ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            r"0123456789_"
+        )
+        word_chars.update(self.extra_word_chars)
 
-        return re.sub(pattern, new, text, flags=flags)
+        old_re = re.compile(re.escape(old), flags)
+
+        def replace(match: re.Match) -> str:
+            start = match.start()
+            end = match.end()
+
+            before = text[start - 1] if start > 0 else None
+            after = text[end] if end < len(text) else None
+
+            valid_before = (
+                before is None
+                or before not in word_chars
+                or before in self.allowed_prefixes
+            )
+
+            valid_after = (
+                after is None
+                or after not in word_chars
+                or after in self.allowed_suffixes
+            )
+
+            return new if valid_before and valid_after else match.group(0)
+
+        return old_re.sub(replace, text)
 
 
 class ObsidianAutoLinker:
@@ -56,6 +85,8 @@ class ObsidianAutoLinker:
         link: ObsidianLink,
         whole_words: bool = True,
         extra_word_chars: str = "",
+        allowed_prefixes: str = "",
+        allowed_suffixes: str = "",
         verbose: bool = False,
         ignore_case: bool = False,
     ) -> None:
@@ -74,7 +105,12 @@ class ObsidianAutoLinker:
             )
 
         self._link_rules[trigger] = AutoLinkRule(
-            link, whole_words, extra_word_chars, ignore_case
+            link,
+            whole_words,
+            extra_word_chars,
+            allowed_prefixes,
+            allowed_suffixes,
+            ignore_case,
         )
         self._sorted = False
 
@@ -87,6 +123,8 @@ class ObsidianAutoLinker:
         verbose: bool = False,
         whole_words: bool = True,
         extra_word_chars: str = "",
+        allowed_prefixes: str = "",
+        allowed_suffixes: str = "",
     ) -> None:
         """
         Register notes as auto-link targets.
@@ -111,6 +149,8 @@ class ObsidianAutoLinker:
                     ObsidianLink(note.title),
                     whole_words,
                     extra_word_chars,
+                    allowed_prefixes,
+                    allowed_suffixes,
                     verbose,
                 )
 
@@ -121,6 +161,8 @@ class ObsidianAutoLinker:
                         ObsidianLink(note.title, alias=title_lower),
                         whole_words,
                         extra_word_chars,
+                        allowed_prefixes,
+                        allowed_suffixes,
                         verbose,
                     )
 
@@ -145,6 +187,8 @@ class ObsidianAutoLinker:
                         ObsidianLink(note.title, alias),
                         whole_words,
                         extra_word_chars,
+                        allowed_prefixes,
+                        allowed_suffixes,
                         verbose,
                     )
 
