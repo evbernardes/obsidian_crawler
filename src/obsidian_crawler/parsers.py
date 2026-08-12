@@ -141,7 +141,8 @@ def fuse_blocks(blocks) -> str:
 
 
 def parse_url_links(markdown):
-    pattern = r"(\[([^\]]+)\]\(([^)\s]+)\))"
+    # pattern = r"(\[([^\]]+)\]\(([^)\s]+)\))" # old one that does not accept spaces
+    pattern = r"\[([^\]]+)\]\((.*?)\)"  # accepts spaces in url
 
     return [match.group(1) for match in re.finditer(pattern, markdown)]
 

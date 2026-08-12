@@ -312,21 +312,41 @@ This is more text about [[Large Language Model|LLM]].
 
 def test_url_link():
 
-    note = ObsidianNote(
+    note_llm = ObsidianNote(
         "./Large Language Model.md",
         fm={"tags": ["concept"], "aliases": ["LLM"]},
     )
 
+    note_wp3 = ObsidianNote(
+        "./WP3 Testing.md",
+        fm={"tags": ["concept"], "aliases": ["WP3"]},
+    )
+
     linker = ObsidianAutoLinker()
 
-    for trigger, link in note.to_links().items():
-        linker.add_link(trigger, link)
+    for note in [note_llm, note_wp3]:
+        for trigger, link in note.to_links().items():
+            linker.add_link(trigger, link)
 
     text = "This is a summary about task LLM concepts, you can read more about it on [My blog about LLM right now](my.llm.blog)."
 
     assert (
         linker.run(text)
         == "This is a summary about task [[Large Language Model|LLM]] concepts, you can read more about it on [My blog about LLM right now](my.llm.blog)."
+    )
+
+    text_italic_broken = "_This is a summary about task LLM concepts, you can read more about it on (_[My blog about LLM right now](my.llm.blog)_)._."
+
+    assert (
+        linker.run(text_italic_broken)
+        == "_This is a summary about task [[Large Language Model|LLM]] concepts, you can read more about it on (_[My blog about LLM right now](my.llm.blog)_)._."
+    )
+
+    text_url_has_text_with_spaces = "This is a summary about task LLM concepts, you can read more about it on [My blog about LLM right now](my.llm.blog.protected Original URL: https://my.llm.blog Click or tap if you trust this link.)"
+
+    assert (
+        linker.run(text_url_has_text_with_spaces)
+        == "This is a summary about task [[Large Language Model|LLM]] concepts, you can read more about it on [My blog about LLM right now](my.llm.blog.protected Original URL: https://my.llm.blog Click or tap if you trust this link.)"
     )
 
 
