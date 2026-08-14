@@ -66,6 +66,15 @@ class ObsidianQuery:
 
         return self.where(lambda n: any(tag in n.tags for tag in tags))
 
+    def without_tag(self, tag: str) -> ObsidianQuery:
+        return self.where(lambda n: tag not in n.tags)
+
+    def without_tags(self, *tags: str, require_all: bool = True) -> ObsidianQuery:
+        if require_all:
+            return self.where(lambda n: all(tag not in n.tags for tag in tags))
+
+        return self.where(lambda n: any(tag not in n.tags for tag in tags))
+
     # --------------------------------------------------
     # Projection
     # --------------------------------------------------
