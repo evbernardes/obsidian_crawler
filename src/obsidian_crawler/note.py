@@ -16,6 +16,7 @@ import yaml
 from .block import MarkdownBlock
 from .link import ObsidianLink
 from .parsers import fuse_content, parse_blocks, parse_content
+from .section import ObsidianDocument
 
 
 def _remove_dataviewjs_blocks(text: str) -> str:
@@ -166,10 +167,19 @@ class ObsidianNote:
     def links(self) -> list[ObsidianLink]:
         return self._links
 
-    def as_link(self, alias: None | str = None) -> ObsidianLink:
+    @property
+    def sections(self) -> ObsidianDocument:
+        return ObsidianDocument.from_text(self.body)
+
+    def as_link(
+        self,
+        alias: None | str = None,
+        heading: None | str = None,
+        block: None | str = None,
+    ) -> ObsidianLink:
         if alias == self.title:
             alias = None
-        return ObsidianLink(self.title, alias)
+        return ObsidianLink(self.title, alias, heading, block)
 
     def to_links(self) -> dict[str, ObsidianLink]:
         links = {}
