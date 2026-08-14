@@ -167,8 +167,7 @@ class ObsidianNote:
     def links(self) -> list[ObsidianLink]:
         return self._links
 
-    @property
-    def sections(self) -> ObsidianDocument:
+    def as_document(self) -> ObsidianDocument:
         return ObsidianDocument.from_text(self.body)
 
     def as_link(
