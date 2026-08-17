@@ -392,3 +392,44 @@ def test_equation():
         )
         == "Define a [[Value function]] $$f_{\\text{value}}: \\mathbb{N} \\to \\mathbb{R}$$. Let's see some properties of $ f_{\\text{value}}$:"
     )
+
+
+def test_autolink_with_headers():
+    note = ObsidianNote(
+        "./Large Language Model.md", fm={"tags": ["concept"], "aliases": ["LLM"]}
+    )
+
+    linker = ObsidianAutoLinker()
+
+    for trigger, link in note.to_links().items():
+        linker.add_link(trigger, link)
+
+    assert (
+        linker.run("""
+# Valid LLM header
+
+Text LLM
+
+## Another valid LLM header
+""")
+        == """
+# Valid LLM header
+
+Text [[Large Language Model|LLM]]
+
+## Another valid LLM header
+"""
+    )
+
+    assert (
+        linker.run("""
+     # Unvalid LLM header
+    
+    Text LLM
+    """)
+        == """
+     # Unvalid [[Large Language Model|LLM]] header
+    
+    Text [[Large Language Model|LLM]]
+    """
+    )

@@ -9,6 +9,7 @@ from .link import ObsidianLink
 from .note import ObsidianNote
 from .parsers import fuse_blocks, parse_math, parse_url_links
 from .query import ObsidianQuery
+from .section import _HEADER_RE
 
 
 def _create_token(text: str) -> str:
@@ -205,7 +206,9 @@ class ObsidianAutoLinker:
             self._link_rules = dict(link_rules_list)
             self._sorted = True
 
-    def run(self, text: str | ObsidianNote) -> str | ObsidianNote:
+    def run(
+        self, text: str | ObsidianNote, skip_headers: bool = True
+    ) -> str | ObsidianNote:
         """
         Replace known text by Obsidian links.
 
@@ -236,6 +239,13 @@ class ObsidianAutoLinker:
             token = _create_token(markdown)
             protected[token] = markdown
             text = text.replace(markdown, token)
+
+        if skip_headers:
+            for match in _HEADER_RE.finditer(text):
+                header_line = match[0]
+                token = _create_token(header_line)
+                protected[token] = header_line
+                text = text.replace(header_line, token)
 
         for urllink in parse_url_links(text):
             token = _create_token(urllink)
