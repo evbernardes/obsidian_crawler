@@ -433,3 +433,27 @@ Text [[Large Language Model|LLM]]
     Text [[Large Language Model|LLM]]
     """
     )
+
+
+def test_autolink_header_with_link():
+    note = ObsidianNote(
+        "./Large Language Model.md", fm={"tags": ["concept"], "aliases": ["LLM"]}
+    )
+
+    linker = ObsidianAutoLinker()
+
+    for trigger, link in note.to_links().items():
+        linker.add_link(trigger, link)
+
+    assert (
+        linker.run("""
+    # This header already has a [[Large Language Model|link]]
+    
+    Text LLM
+    """)
+        == """
+    # This header already has a [[Large Language Model|link]]
+    
+    Text [[Large Language Model|LLM]]
+    """
+    )

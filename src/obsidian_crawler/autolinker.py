@@ -233,19 +233,20 @@ class ObsidianAutoLinker:
 
         protected: dict[str, str] = {}
 
-        # protect existing links beforehand
-        for link in ObsidianLink.parse(text):
-            markdown = link.to_markdown()
-            token = _create_token(markdown)
-            protected[token] = markdown
-            text = text.replace(markdown, token)
-
+        # Important to first protect headers, as they might have links in them
         if skip_headers:
             for match in _HEADER_RE.finditer(text):
                 header_line = match[0]
                 token = _create_token(header_line)
                 protected[token] = header_line
                 text = text.replace(header_line, token)
+
+        # protect existing links beforehand
+        for link in ObsidianLink.parse(text):
+            markdown = link.to_markdown()
+            token = _create_token(markdown)
+            protected[token] = markdown
+            text = text.replace(markdown, token)
 
         for urllink in parse_url_links(text):
             token = _create_token(urllink)
