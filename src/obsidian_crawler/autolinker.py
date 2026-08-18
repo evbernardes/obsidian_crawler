@@ -57,17 +57,55 @@ class AutoLinkRule:
             before = text[start - 1] if start > 0 else None
             after = text[end] if end < len(text) else None
 
-            valid_before = (
-                before is None
-                or before not in word_chars
-                or before in self.allowed_prefixes
-            )
+            # -------------------------------------------------
+            # Prefix
+            # -------------------------------------------------
 
-            valid_after = (
-                after is None
-                or after not in word_chars
-                or after in self.allowed_suffixes
-            )
+            if before is None or before not in word_chars:
+                valid_before = True
+
+            elif before in self.allowed_prefixes:
+                # An allowed prefix is only valid if it actually
+                # starts the token rather than being attached to
+                # another word character.
+                before_prefix = text[start - 2] if start > 1 else None
+
+                valid_before = before_prefix is None or before_prefix not in word_chars
+            else:
+                valid_before = False
+
+            # valid_before = (
+            #     before is None
+            #     or before not in word_chars
+            #     or before in self.allowed_prefixes
+            # )
+
+            # -------------------------------------------------
+            # Suffix
+            # -------------------------------------------------
+
+            if after is None or after not in word_chars:
+                valid_after = True
+
+            elif after in self.allowed_suffixes:
+                # The allowed suffix must actually terminate the
+                # token. For example:
+                #
+                #   T1.3.     -> valid
+                #   T1.3.5    -> invalid
+                #
+                after_suffix = text[end + 1] if end + 1 < len(text) else None
+
+                valid_after = after_suffix is None or after_suffix not in word_chars
+
+            else:
+                valid_after = False
+
+            # valid_after = (
+            #     after is None
+            #     or after not in word_chars
+            #     or after in self.allowed_suffixes
+            # )
 
             return new if valid_before and valid_after else match.group(0)
 

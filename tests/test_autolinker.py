@@ -141,7 +141,43 @@ def test_single_note_extra_delimiter(tmp_path):
 
     linker = ObsidianAutoLinker()
     linker.add_notes(vault.query().with_tag("task"), extra_word_chars=".")
-    assert linker.run(text) == "This is a test for [[T1.2 test Task|T1.2]] and T1.2.4"
+    assert (
+        linker.run(text) == "This is a test for [[T1.2 test Task|T1.2]] and T1.2.4"
+    )  # This is what I want
+
+
+def test_single_note_extra_delimiter_suffix(tmp_path):
+    vault = ObsidianVault(tmp_path)
+
+    ObsidianNote(".", fm={"tags": ["task"], "aliases": ["T1.2"]}).write(
+        vault.vault_path / "T1.2 test Task.md"
+    )
+    text = "This is a test for T1.2. Also don't forget and T1.2.4 and T1.2._"
+
+    linker = ObsidianAutoLinker()
+    linker.add_notes(vault.query().with_tag("task"), extra_word_chars=".")
+    assert (
+        linker.run(text)
+        == "This is a test for T1.2. Also don't forget and T1.2.4 and T1.2._"
+    )  # This is not what I want
+
+    linker = ObsidianAutoLinker()
+    linker.add_notes(
+        vault.query().with_tag("task"), extra_word_chars=".", allowed_suffixes="."
+    )
+    assert (
+        linker.run(text)
+        == "This is a test for [[T1.2 test Task|T1.2]]. Also don't forget and T1.2.4 and T1.2._"
+    )  # Better, not there yet
+
+    linker = ObsidianAutoLinker()
+    linker.add_notes(
+        vault.query().with_tag("task"), extra_word_chars="._", allowed_suffixes="._"
+    )
+    assert (
+        linker.run(text)
+        == "This is a test for [[T1.2 test Task|T1.2]]. Also don't forget and T1.2.4 and T1.2._"
+    )  # Perfect
 
 
 def test_single_note_allowed_prefixes(tmp_path):
