@@ -2,6 +2,13 @@
 from obsidian_crawler.section import ObsidianDocument, ObsidianSection
 
 
+def _round_trip(text: str, section_number: None | int = None):
+    doc = ObsidianDocument.from_text(text)
+    if section_number is None:
+        return doc.to_markdown()
+    return doc.sections[section_number].to_markdown()
+
+
 def test_empty_document():
     document = ObsidianDocument.from_text("")
 
@@ -31,12 +38,13 @@ def test_single_section():
 
     assert section.title == "Introduction"
     assert section.level == 1
-    # assert section.content == "\n\nHello world.\n" #LATER
-    assert section.content == "Hello world."
+    assert (
+        section.content == "\nHello world.\n"
+    )  # Only one extra space, the first one is already the header separation
     assert section.parent is None
 
-    # assert document.to_markdown() == text #LATER
-    # assert section.to_markdown() == text #LATER
+    assert document.to_markdown() == text
+    assert section.to_markdown() == text
 
 
 def test_preamble_is_preserved():
@@ -44,10 +52,9 @@ def test_preamble_is_preserved():
 
     document = ObsidianDocument.from_text(text)
 
-    # assert document.preamble == ("Some introductory text.\n\nAnother paragraph.\n\n") #LATER
-    assert document.preamble == ("Some introductory text.\n\nAnother paragraph.")
+    assert document.preamble == ("Some introductory text.\n\nAnother paragraph.\n")
 
-    # assert document.to_markdown() == text #LATER
+    assert document.to_markdown() == text
 
 
 def test_multiple_top_level_sections():
@@ -59,11 +66,13 @@ def test_multiple_top_level_sections():
 
     assert document.sections[0].title == "First"
     assert document.sections[0].level == 1
+    assert document.sections[0].content == "\nFirst content.\n"
 
     assert document.sections[1].title == "Second"
     assert document.sections[1].level == 1
+    assert document.sections[1].content == "\nSecond content.\n"
 
-    # assert document.to_markdown() == text #LATER
+    assert document.to_markdown() == text
 
 
 def test_nested_sections():
@@ -118,12 +127,12 @@ def test_nested_sections():
     assert goals.level == 2
     assert goals.parent is introduction
 
-    # assert document.to_markdown() == text #LATER
+    assert document.to_markdown() == text
 
 
 def test_section_content_preserves_whitespace():
     text = (
-        "# Section   \n"
+        "# Section  \n"
         "\n"
         "\n"
         "  Some content.  \n"
@@ -140,22 +149,30 @@ def test_section_content_preserves_whitespace():
 
     section = document.sections[0]
 
-    assert section.title == "Section"
-    # assert section.content == ("\n\n  Some content.  \n\n    Indented content.\n\n\n") #LATER
-    assert section.content == ("Some content.  \n\n    Indented content.")
-
-    # assert document.to_markdown() == text
+    assert section.title == "Section  "
+    assert section.content == ("\n\n  Some content.  \n\n    Indented content.\n\n")
+    assert document.to_markdown() == text
 
 
 def test_header_whitespace_is_preserved():
-    text = "#   Introduction   \n\nHello.\n\n##\tBackground\t\n\nDetails.\n"
+    text = "#   Introduction   \n\nHello.\n\n## \tBackground\t\n\nDetails.\n"
 
     document = ObsidianDocument.from_text(text)
 
-    assert document.sections[0].title == "Introduction"
-    assert document.sections[0].children[0].title == "Background"
+    assert document.sections[0].title == "  Introduction   "
+    assert document.sections[0].children[0].title == "\tBackground\t"
 
-    # assert document.to_markdown() == text #LATER
+    assert document.to_markdown() == text
+
+
+def test_header_title_cannot_start_with_tab():
+    text = "#\tIntroduction"
+
+    document = ObsidianDocument.from_text(text)
+
+    assert len(document.sections) == 0
+
+    assert document.to_markdown() == text
 
 
 def test_section_reconstruction_without_children():
@@ -176,12 +193,9 @@ def test_section_reconstruction_without_children():
     document = ObsidianDocument.from_text(text)
     introduction = document.sections[0]
 
-    # full = introduction.to_markdown() #LATER
     own = introduction.to_markdown(include_children=False)
 
-    # assert full == text
-    # assert own == ("# Introduction\n\nIntroduction content.\n\n") #LATER
-    assert own == ("# Introduction\n\nIntroduction content.")
+    assert own == ("# Introduction\n\nIntroduction content.\n")
 
 
 def test_leaf_section_reconstruction():
@@ -191,14 +205,10 @@ def test_leaf_section_reconstruction():
 
     background = document.sections[0].children[0]
 
-    # assert background.to_markdown() == ("## Background\n\nBackground.\n") #LATER
-    assert background.to_markdown() == ("## Background\n\nBackground.")
+    assert background.to_markdown() == ("## Background\n\nBackground.\n")
 
-    # assert background.to_markdown(include_children=False) == (
-    #     "## Background\n\nBackground.\n"
-    # ) #LATER
     assert background.to_markdown(include_children=False) == (
-        "## Background\n\nBackground."
+        "## Background\n\nBackground.\n"
     )
 
 
@@ -239,24 +249,23 @@ def test_duplicate_titles():
     first = document.find("Introduction")
 
     assert first is document.sections[0]
-    # assert first.content == "\n\nFirst.\n" #LATER
-    assert first.content == "First."
+    assert first.content == "\nFirst.\n"
 
 
-def test_exact_round_trip_with_no_trailing_newline():
-    text = "Preamble\n\n# Introduction\n\nContent\n\n## Details\n\nMore content"
-
-    document = ObsidianDocument.from_text(text)
-
-    assert document.to_markdown() == text
-
-
-# def test_exact_round_trip_with_multiple_trailing_newlines(): #LATER
-#     text = "# Introduction\n\nContent\n\n\n\n"
+# def test_exact_round_trip_with_no_trailing_newline():
+#     text = "Preamble\n\n# Introduction\n\nContent\n\n## Details\n\nMore content"
 
 #     document = ObsidianDocument.from_text(text)
 
 #     assert document.to_markdown() == text
+
+
+def test_exact_round_trip_with_multiple_trailing_newlines():
+    text = "# Introduction\n\nContent\n\n\n\n"
+
+    document = ObsidianDocument.from_text(text)
+
+    assert document.to_markdown() == text
 
 
 def test_exact_round_trip_with_no_content():
@@ -266,75 +275,145 @@ def test_exact_round_trip_with_no_content():
 
     section = document.sections[0]
 
+    assert document.preamble == ""
     assert section.title == "Empty section"
-    # assert section.content == "\n" #LATER
     assert section.content == ""
 
-    # assert document.to_markdown() == text  # LATER
-    assert section.to_markdown() == text  # LATER
+    assert document.to_markdown() == text
 
 
 def test_level_jump():
-    text = "# Introduction\n\n## Background\n\n#### Detail\n\nDetails.\n"
+
+    text = (
+        ""
+        + "# Introduction\nBla\n"
+        + "## Background\nBlabla\n"
+        + "#### Detail\n\nDetails.\n"
+    )
+
+    document = ObsidianDocument.from_text(text)
+
+    introduction = document.sections[0]
+    assert introduction.level == 1
+    assert introduction.title == "Introduction"
+    assert introduction.content == "Bla"
+    assert introduction.to_markdown(include_children=False) == "# Introduction\nBla"
+
+    background = introduction.children[0]
+    assert background.level == 2
+    assert background.title == "Background"
+    assert background.content == "Blabla"
+    assert background.to_markdown(include_children=False) == "## Background\nBlabla"
+
+    assert introduction.to_markdown(
+        include_children=False
+    ) + "\n" + background.to_markdown(
+        include_children=True
+    ) == introduction.to_markdown(include_children=True)
+
+    detail = background.children[0]
+    assert detail.level == 4
+    assert detail.title == "Detail"
+    assert detail.content == "\nDetails.\n"
+    assert detail.to_markdown() == "#### Detail\n\nDetails.\n"
+
+    assert background.to_markdown(include_children=False) + "\n" + detail.to_markdown(
+        include_children=False
+    ) == background.to_markdown(include_children=True)
+
+    assert detail.parent is background
+
+    assert document.to_markdown() == text
+
+
+def test_level_jump_empty_section():
+
+    text = (
+        ""
+        + "# Introduction\n\n"
+        + "## Background\nBlabla\n"
+        + "#### Detail\nDetails.\n"
+    )
 
     document = ObsidianDocument.from_text(text)
 
     introduction = document.sections[0]
     background = introduction.children[0]
-    detail = background.children[0]
 
-    assert detail.level == 4
-    assert detail.parent is background
+    assert introduction.title == "Introduction"
+    assert background.title == "Background"
 
-    # assert document.to_markdown() == text #LATER
+    assert introduction.content == ""
+    assert background.content == "Blabla"
+
+    assert document.to_markdown() == text
 
 
 def test_manual_creation():
 
     section1_dict = {
-        "title": "Top header",
+        "title": "Top header" + "  ",  # Two trailing spaces after 'Top header'
         "level": 1,
-        "content": "Testing header. \n\nTesting lines.",  # There is a trailing space after 'Testing header.'
+        "content": "\nTesting header. \n\nTesting lines.\n\n\n\n\n",  # There is a trailing space after 'Testing header.'
     }
-    section1_full = """# Top header
-
-Testing header. 
-
-Testing lines."""
-    section1 = ObsidianSection(**section1_dict)
-    assert section1.to_markdown() == section1_full
-
-    section2_dict = {
-        "title": "Sub header",
-        "level": 2,
-        "content": "Content. \n\nHere we have:\n- One\n- Two\n- Three",  # There is a trailing space after 'Content.'
-    }
-    section2_full = """## Sub header
-
-Content. 
-
-Here we have:
-- One
-- Two
-- Three"""
-    section2 = ObsidianSection(**section2_dict)
-    assert section2.to_markdown() == section2_full
-
-    doc = ObsidianDocument("", sections=[section1, section2])
-    doc_full = """# Top header
+    section1_full = """# Top header  
 
 Testing header. 
 
 Testing lines.
 
-## Sub header
+
+
+
+"""
+    section1 = ObsidianSection(**section1_dict)
+    assert section1.to_markdown() == section1_full
+    assert _round_trip(section1_full, 0) == section1_full
+
+    section2_dict = {
+        "title": "Sub header",
+        "level": 2,
+        "content": "\n\n\n\nContent. \n\nHere we have:\n- One\n- Two\n- Three\n",  # There is a trailing space after 'Content.'
+    }
+    section2_full = """## Sub header
+
+
+
 
 Content. 
 
 Here we have:
 - One
 - Two
-- Three"""
+- Three
+"""
+
+    section2 = ObsidianSection(**section2_dict)
+    assert section2.to_markdown() == section2_full
+    assert _round_trip(section2_full, 0) == section2_full
+
+    doc = ObsidianDocument("", sections=[section1, section2])
+    doc_full = """# Top header  
+
+Testing header. 
+
+Testing lines.
+
+
+
+
+
+## Sub header
+
+
+
+
+Content. 
+
+Here we have:
+- One
+- Two
+- Three
+"""
 
     assert doc.to_markdown() == doc_full
-    assert ObsidianDocument.from_text(doc_full).to_markdown() == doc_full

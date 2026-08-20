@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
-_HEADER_RE = re.compile(r"^(#{1,6})[ \t]+(.+?)[ \t]*$", re.MULTILINE)
+_HEADER_RE = re.compile(r"^(#{1,6}) +(.+?)[ \t]*$", re.MULTILINE)
 
 
 @dataclass(slots=True)
@@ -23,17 +23,17 @@ class ObsidianSection:
         return f"{'#' * self.level} {self.title}"
 
     def to_markdown(self, include_children: bool = True) -> str:
-        parts = [self.header]
-
-        if self.content:
-            parts.append(self.content)
+        parts = [self.header, self.content]
 
         if include_children:
             parts.extend(
                 child.to_markdown(include_children=True) for child in self.children
             )
 
-        return "\n\n".join(parts)
+        if parts[-1] == "":
+            parts = parts[:-1]
+
+        return "\n".join(parts)
 
     def find(self, title: str, level: int | None = None) -> ObsidianSection | None:
         if self.title == title and (level is None or self.level == level):
@@ -58,20 +58,28 @@ class ObsidianDocument:
         if not matches:
             return ObsidianDocument(preamble=text)
 
-        document = ObsidianDocument(preamble=text[: matches[0].start()].rstrip())
+        # document = ObsidianDocument(preamble=text[: matches[0].start()].rstrip())
+        preamble = text[: matches[0].start()]
+        preamble = preamble.removesuffix("\n")
+        document = ObsidianDocument(preamble=preamble)
 
         stack: list[ObsidianSection] = []
 
         for index, match in enumerate(matches):
             level = len(match.group(1))
-            title = match.group(2).strip()
 
-            content_start = match.end()
+            title = match.group(0)[level + 1 : match.end()]
+
+            is_last_item = index + 1 == len(matches)
+
+            content_start = match.end() + 1
             content_end = (
-                matches[index + 1].start() if index + 1 < len(matches) else len(text)
+                len(text) if index + 1 == len(matches) else matches[index + 1].start()
             )
 
-            content = text[content_start:content_end].strip()
+            content = text[content_start:content_end]  # .strip()
+            if not is_last_item:
+                content = content[:-1]
 
             section = ObsidianSection(
                 title=title,
@@ -99,7 +107,13 @@ class ObsidianDocument:
 
         parts.extend(section.to_markdown() for section in self.sections)
 
-        return "\n\n".join(parts)
+        if len(parts) == 0:
+            return ""
+
+        if parts[-1] == "":
+            parts = parts[:-1]
+
+        return "\n".join(parts)
 
     def find(self, title: str, level: int | None = None) -> ObsidianSection | None:
         for section in self.sections:
