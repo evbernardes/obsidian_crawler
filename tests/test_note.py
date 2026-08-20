@@ -193,7 +193,8 @@ def test_tags_property():
 def test_tags_defaults_to_empty():
     note = ObsidianNote("note.md")
 
-    assert note.tags == []
+    with pytest.warns():
+        assert note.tags == []
 
 
 def test_title():

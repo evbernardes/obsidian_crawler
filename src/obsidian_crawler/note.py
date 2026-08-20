@@ -7,6 +7,7 @@ from collections.abc import Iterable, Iterator
 from copy import deepcopy
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from warnings import warn
 
 if TYPE_CHECKING:
     from .vault import ObsidianVault
@@ -153,7 +154,14 @@ class ObsidianNote:
 
     @property
     def tags(self) -> list[str]:
-        return self.fm.get("tags", [])
+        if "tags" not in self.fm:
+            warn("Note does not have 'tags', returning empty list.")
+            return []
+
+        if not isinstance(tags := self.fm["tags"], list):
+            raise TypeError(f"'tags' property of type {type(tags)}, expected list.")
+
+        return tags
 
     @property
     def as_json(self) -> dict[str, Any]:
