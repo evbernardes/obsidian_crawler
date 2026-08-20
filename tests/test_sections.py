@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from obsidian_crawler.section import ObsidianDocument
+from obsidian_crawler.section import ObsidianDocument, ObsidianSection
 
 
 def test_empty_document():
@@ -287,3 +287,54 @@ def test_level_jump():
     assert detail.parent is background
 
     # assert document.to_markdown() == text #LATER
+
+
+def test_manual_creation():
+
+    section1_dict = {
+        "title": "Top header",
+        "level": 1,
+        "content": "Testing header. \n\nTesting lines.",  # There is a trailing space after 'Testing header.'
+    }
+    section1_full = """# Top header
+
+Testing header. 
+
+Testing lines."""
+    section1 = ObsidianSection(**section1_dict)
+    assert section1.to_markdown() == section1_full
+
+    section2_dict = {
+        "title": "Sub header",
+        "level": 2,
+        "content": "Content. \n\nHere we have:\n- One\n- Two\n- Three",  # There is a trailing space after 'Content.'
+    }
+    section2_full = """## Sub header
+
+Content. 
+
+Here we have:
+- One
+- Two
+- Three"""
+    section2 = ObsidianSection(**section2_dict)
+    assert section2.to_markdown() == section2_full
+
+    doc = ObsidianDocument("", sections=[section1, section2])
+    doc_full = """# Top header
+
+Testing header. 
+
+Testing lines.
+
+## Sub header
+
+Content. 
+
+Here we have:
+- One
+- Two
+- Three"""
+
+    assert doc.to_markdown() == doc_full
+    assert ObsidianDocument.from_text(doc_full).to_markdown() == doc_full
