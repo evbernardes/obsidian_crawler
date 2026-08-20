@@ -396,3 +396,18 @@ print("Hello")
     note = ObsidianNote("note.md", body=f"\n{text}\n{block}\n")
     assert fuse_blocks(note.blocks) != note.body
     assert fuse_blocks(note.blocks).strip() == note.body.strip()
+
+
+def test_has_tags():
+    note = ObsidianNote(".test.md", fm={"tags": ["tag2"]})
+    assert note.has_tags("tag1") == [False]
+    assert note.has_tags("tag1", "tag3") == [False, False]
+    assert note.has_tags("tag1", "tag2", "tag3") == [False, True, False]
+
+    note = ObsidianNote(".test.md", fm={})
+    with pytest.warns():  # No tags whatsoever
+        assert note.has_tags("tag1", "tag2") == [False, False]
+
+    note = ObsidianNote(".test.md", fm={"tags": 1})
+    with pytest.warns():
+        assert note.has_tags("tag1", "tag2") == [False, False]

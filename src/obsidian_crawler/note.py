@@ -217,3 +217,13 @@ class ObsidianNote:
         print(
             f"Frontmatter:\n{yaml.dump(self.fm, sort_keys=False)}\nBody:\n{self.body}"
         )
+
+    def has_tags(self, *tags: str) -> list[bool]:
+        try:
+            return [tag in self.tags for tag in tags]
+        except TypeError:
+            warn(
+                f"Note '{self.title}' has invalid type 'tags', expected list and got {type(self.fm['tags'])}. "
+                "Returning False for all values"
+            )
+            return [False] * len(tags)
